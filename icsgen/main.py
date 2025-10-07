@@ -14,7 +14,7 @@ import argparse
 import re
 import subprocess
 import tempfile
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 from uuid import uuid4
 from pathlib import Path
 import sys
@@ -43,13 +43,13 @@ def parse_time(t: str) -> datetime:
 
     # DD.MMTHH:MM
     if re.match(r"^\d{1,2}\.\d{1,2}T\d{1,2}:\d{2}$", t):
-        day, month, timepart = re.split(r"[\.T]", t)
+        day, month, timepart = re.split(r"[\\.T]", t)
         hh, mm = map(int, timepart.split(":"))
         return datetime(now.year, int(month), int(day), hh, mm)
 
     # DD.MM.YYYTHH:MM
     if re.match(r"^\d{1,2}\.\d{1,2}\.\d{4}T\d{1,2}:\d{2}$", t):
-        day, month, year, timepart = re.split(r"[\.T]", t)
+        day, month, year, timepart = re.split(r"[\\.T]", t)
         hh, mm = map(int, timepart.split(":"))
         return datetime(int(year), int(month), int(day), hh, mm)
 
@@ -83,7 +83,7 @@ def make_event(summary, start, end, location=None, desc=None):
     lines = [
         "BEGIN:VEVENT",
         f"UID:{uuid4()}",
-        f"DTSTAMP:{fmt(datetime.utcnow())}Z",
+        f"DTSTAMP:{fmt(datetime.now(timezone.utc))}Z",
         f"DTSTART:{fmt(start)}",
         f"DTEND:{fmt(end)}",
         f"SUMMARY:{summary}",
