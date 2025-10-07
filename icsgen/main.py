@@ -12,6 +12,8 @@ Usage examples:
 
 import argparse
 import re
+import subprocess
+import tempfile
 from datetime import datetime, timedelta
 from uuid import uuid4
 from pathlib import Path
@@ -102,10 +104,11 @@ def make_calendar(events):
 def main():
     parser = argparse.ArgumentParser(description="Generate ICS calendar events easily.")
     parser.add_argument("args", nargs="*", help="Positional args: <start> <summary> [<location>] <end>")
-    parser.add_argument("-o", "--output", default="event.ics", help="Output ICS file name (default: event.ics)")
+    parser.add_argument("-o", "--output", help="Output ICS file name. If not provided, a temporary file will be created.")
     parser.add_argument("-d", "--desc", help="Optional event description")
     parser.add_argument("-m", "--multi", help="Read multiple events from a file (one per line)")
     parser.add_argument("--dry", action="store_true", help="Print output to stdout instead of writing file")
+    parser.add_argument("--no-open", action="store_true", help="Do not open the file after creation.")
 
     opts = parser.parse_args()
 
@@ -153,8 +156,36 @@ def main():
     if opts.dry:
         print(ics_content)
     else:
-        Path(opts.output).write_text(ics_content)
-        print(f"✅ ICS file written to {Path(opts.output).resolve()}")
+        if opts.output:
+            output_path = Path(opts.output)
+        else:
+            output_path = Path(tempfile.gettempdir()) / f"{uuid4()}.ics"
+        
+        output_path.write_text(ics_content)
+        print(f"✅ ICS file written to {output_path.resolve()}")
+
+        if not opts.no_open:
+            open_command = []
+            if sys.platform == "darwin":
+                open_command = ["open", str(output_path)]
+            elif sys.platform == "win32":
+                open_command = ["start", str(output_path)]
+            else:
+                open_command = ["xdg-open", str(output_path)]
+
+            if open_command:
+                try:
+                    print(f"Attempting to open {output_path.resolve()}...")
+                    if sys.platform == "win32":
+                        subprocess.run(open_command, shell=True, check=True)
+                    else:
+                        subprocess.run(open_command, check=True)
+                except FileNotFoundError:
+                    print(f"❌ Could not open file. Command '{open_command[0]}' not found.")
+                except subprocess.CalledProcessError:
+                    print(f"❌ Failed to open file with '{open_command[0]}'. Is a default application configured for .ics files?")
+                except Exception as e:
+                    print(f"❌ Failed to open file: {e}")
 
 
 if __name__ == "__main__":
