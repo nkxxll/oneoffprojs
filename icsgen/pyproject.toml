@@ -7,4 +7,4 @@ requires-python = ">=3.13"
 dependencies = []
 
 [project.scripts]
-pdftonote = "main:main"
+icsgen = "main:main"
