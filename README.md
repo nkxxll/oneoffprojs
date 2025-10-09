@@ -20,3 +20,9 @@ will automate some task for me. Very sloppy, ...
   - or only download them?
 - events can then be generated with human language in claude desktop directly imported with the tool
 - ics files can for example be written to `/tmp/mcp-ics` and open from there with `open`
+
+## prompt manager
+
+- manage pre-written prompts for coding agents
+- poc works
+- some TODOs still 🚧
