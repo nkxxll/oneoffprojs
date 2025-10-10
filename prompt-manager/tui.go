@@ -11,6 +11,7 @@ import (
 	"github.com/charmbracelet/bubbles/textarea"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/google/uuid"
 )
 
@@ -19,6 +20,7 @@ type viewState int
 const (
 	listView viewState = iota
 	formView
+	templateView
 )
 
 // tuiModel is the main model for the TUI.
@@ -26,6 +28,7 @@ type tuiModel struct {
 	store         *Store
 	list          list.Model
 	form          *Form
+	templateForm  *TemplateForm
 	state         viewState
 	err           error
 	tmuxTarget    string
@@ -40,6 +43,14 @@ type Form struct {
 	text       textarea.Model
 	tags       textinput.Model
 	focusIndex int
+}
+
+// TemplateForm represents the form for filling in template fields.
+type TemplateForm struct {
+	inputs     []textinput.Model
+	focusIndex int
+	promptText string
+	promptName string
 }
 
 // item represents a list item.
@@ -119,9 +130,7 @@ func (m *tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 	var quit bool
 
-	slog.Info(fmt.Sprintf("Filtering state %v", m.list.FilterState()))
-	slog.Info(fmt.Sprintf("Filtering value %v", m.list.FilterValue()))
-	slog.Info(fmt.Sprintf("Filtering items %v", m.list.Items()))
+	slog.Info(fmt.Sprintf("State: %v, Filtering state %v", m.state, m.list.FilterState()))
 
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
@@ -136,10 +145,6 @@ func (m *tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch m.state {
 	case listView:
 		quit, cmd = m.updateListView(msg)
-		// TODO yes this is a war crime but I dont want to make it nice I want
-		// to make it work this is because you cannot use batch with quit
-		// because of race conditions the program ends but one thread might be still
-		// running
 		if quit {
 			return m, tea.Quit
 		}
@@ -165,6 +170,33 @@ func (m *tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.form.Blur(i)
 			}
 		}
+	case templateView:
+		quit, cmd = m.updateTemplateView(msg)
+		if quit {
+			return m, tea.Quit
+		}
+		cmds = append(cmds, cmd)
+
+		// templateForm is nil if we escape from the form
+		if m.templateForm != nil {
+			// Update all text inputs
+			newInputs := make([]textinput.Model, len(m.templateForm.inputs))
+			for i := range m.templateForm.inputs {
+				var inputCmd tea.Cmd
+				newInputs[i], inputCmd = m.templateForm.inputs[i].Update(msg)
+				cmds = append(cmds, inputCmd)
+			}
+			m.templateForm.inputs = newInputs
+
+			// Set focus
+			for i := range m.templateForm.inputs {
+				if i == m.templateForm.focusIndex {
+					cmds = append(cmds, m.templateForm.inputs[i].Focus())
+				} else {
+					m.templateForm.inputs[i].Blur()
+				}
+			}
+		}
 	}
 
 	return m, tea.Batch(cmds...)
@@ -179,6 +211,8 @@ func (m *tuiModel) View() string {
 		return m.list.View()
 	case formView:
 		return m.form.View()
+	case templateView:
+		return m.templateForm.View()
 	default:
 		return ""
 	}
@@ -205,9 +239,17 @@ func (m *tuiModel) updateListView(msg tea.Msg) (quit bool, cmd tea.Cmd) {
 		if ok {
 			p, found := m.store.Get(i.id)
 			if found {
-				Send(m.tmuxTarget, p.Text, false)
-				m.quitting = true
-				return true, tea.Quit
+				fields := ParseTemplate(p.Text)
+				if len(fields) == 0 {
+					Send(m.tmuxTarget, p.Text, false)
+					m.quitting = true
+					return true, tea.Quit
+				}
+
+				// Has template fields, switch to template view
+				m.state = templateView
+				m.templateForm = NewTemplateForm(p.Name, p.Text, fields, m.terminalWidth)
+				return false, m.templateForm.Init()
 			}
 		}
 	case key.Matches(keyMsg, key.NewBinding(key.WithKeys("c"))):
@@ -270,6 +312,46 @@ func (m *tuiModel) updateFormView(msg tea.Msg) tea.Cmd {
 		m.form.focusIndex = (m.form.focusIndex + 1) % 3
 	}
 	return nil
+}
+
+func (m *tuiModel) updateTemplateView(msg tea.Msg) (bool, tea.Cmd) {
+	keyMsg, ok := msg.(tea.KeyMsg)
+	if !ok {
+		return false, nil
+	}
+
+	switch {
+	case key.Matches(keyMsg, key.NewBinding(key.WithKeys("esc"))):
+		m.state = listView
+		m.templateForm = nil
+		return false, nil
+	case key.Matches(keyMsg, key.NewBinding(key.WithKeys("enter"))):
+		if m.templateForm.focusIndex == len(m.templateForm.inputs)-1 {
+			// Last field, render and quit
+			values := make(map[string]string)
+			for _, input := range m.templateForm.inputs {
+				// The placeholder is the key
+				values[input.Placeholder] = input.Value()
+			}
+			rendered := RenderTemplate(m.templateForm.promptText, values)
+			Send(m.tmuxTarget, rendered, false)
+			m.quitting = true
+			return true, tea.Quit
+		}
+		// Move to next input
+		m.templateForm.focusIndex++
+		return false, nil
+	case key.Matches(keyMsg, key.NewBinding(key.WithKeys("tab"))):
+		m.templateForm.focusIndex = (m.templateForm.focusIndex + 1) % len(m.templateForm.inputs)
+		return false, nil
+	case key.Matches(keyMsg, key.NewBinding(key.WithKeys("shift+tab"))):
+		m.templateForm.focusIndex--
+		if m.templateForm.focusIndex < 0 {
+			m.templateForm.focusIndex = len(m.templateForm.inputs) - 1
+		}
+		return false, nil
+	}
+	return false, nil
 }
 
 // Form methods
@@ -339,5 +421,49 @@ func (f *Form) View() string {
 	b.WriteString(f.text.View())
 	b.WriteString("\n")
 	b.WriteString(f.tags.View())
+	return b.String()
+}
+
+// TemplateForm methods
+func NewTemplateForm(promptName, promptText string, fields []string, terminalWidth int) *TemplateForm {
+	inputs := make([]textinput.Model, len(fields))
+	for i, field := range fields {
+		inputs[i] = textinput.New()
+		inputs[i].Placeholder = field
+		inputs[i].CharLimit = 128
+		inputs[i].Width = terminalWidth / 2
+		if i == 0 {
+			inputs[i].Focus()
+		}
+	}
+
+	return &TemplateForm{
+		inputs:     inputs,
+		promptName: promptName,
+		promptText: promptText,
+		focusIndex: 0,
+	}
+}
+
+func (f *TemplateForm) Init() tea.Cmd {
+	return textinput.Blink
+}
+
+func (f *TemplateForm) View() string {
+	var b strings.Builder
+	b.WriteString(lipgloss.NewStyle().Bold(true).Render("Fill in template for: " + f.promptName))
+	b.WriteString("\n\n")
+
+	b.WriteString(lipgloss.NewStyle().Bold(true).Render(f.promptText))
+	b.WriteString("\n\n")
+
+	for i := range f.inputs {
+		b.WriteString(f.inputs[i].View())
+		if i < len(f.inputs)-1 {
+			b.WriteString("\n")
+		}
+	}
+
+	b.WriteString("\n\nEnter to confirm, Esc to cancel, Tab to navigate")
 	return b.String()
 }
