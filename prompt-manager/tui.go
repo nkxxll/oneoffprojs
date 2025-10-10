@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
-	"slices"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/key"
@@ -129,7 +128,6 @@ func (m *tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.list.SetHeight(msg.Height)
 		if m.form != nil {
 			m.form.text.SetWidth(msg.Width)
-			m.form.text.SetHeight(msg.Height)
 		}
 	}
 
@@ -289,12 +287,15 @@ func newForm(id *uuid.UUID) *Form {
 	name := textinput.New()
 	name.Placeholder = "Prompt Name"
 	name.Focus()
+	name.Width = 50
 
 	text := textarea.New()
 	text.Placeholder = "Prompt Text"
+	text.SetWidth(50)
 
 	tags := textinput.New()
 	tags.Placeholder = "tag1,tag2,tag3"
+	tags.Width = 50
 
 	return &Form{
 		id:         id,
