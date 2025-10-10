@@ -1,11 +1,7 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 
-import * as NodeContext from "@effect/platform-node/NodeContext"
-import * as NodeRuntime from "@effect/platform-node/NodeRuntime"
-import * as Effect from "effect/Effect"
-import { run } from "./Cli.js"
+import { BunRuntime } from "@effect/platform-bun";
+import { ServerLayer } from "./Mcp.js";
+import { Layer } from "effect";
 
-run(process.argv).pipe(
-  Effect.provide(NodeContext.layer),
-  NodeRuntime.runMain({ disableErrorReporting: true })
-)
+Layer.launch(ServerLayer).pipe(BunRuntime.runMain);

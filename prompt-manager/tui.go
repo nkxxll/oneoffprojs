@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"io"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/key"
@@ -46,35 +45,12 @@ type item struct {
 	id   uuid.UUID
 	name string
 	tags []string
+	text string
 }
 
-func (i item) FilterValue() string { return i.name }
+func (i item) FilterValue() string { return i.name + " " + i.text + " " + strings.Join(i.tags, " ") }
 func (i item) Title() string       { return i.name }
 func (i item) Description() string { return strings.Join(i.tags, ", ") }
-
-// itemDelegate is the delegate for the list component.
-type itemDelegate struct{}
-
-func (d itemDelegate) Height() int                               { return 1 }
-func (d itemDelegate) Spacing() int                              { return 0 }
-func (d itemDelegate) Update(msg tea.Msg, m *list.Model) tea.Cmd { return nil }
-func (d itemDelegate) Render(w io.Writer, m list.Model, index int, listItem list.Item) {
-	i, ok := listItem.(item)
-	if !ok {
-		return
-	}
-
-	str := fmt.Sprintf("%s", i.name)
-
-	fn := lipgloss.NewStyle().PaddingLeft(4).Render
-	if index == m.Index() {
-		fn = func(s ...string) string {
-			return lipgloss.NewStyle().PaddingLeft(2).Foreground(lipgloss.Color("170")).Render("> " + strings.Join(s, " "))
-		}
-	}
-
-	fmt.Fprint(w, fn(str))
-}
 
 // NewTUI creates a new TUI model.
 func NewTUI(target string) (*tuiModel, error) {
@@ -85,10 +61,14 @@ func NewTUI(target string) (*tuiModel, error) {
 
 	var items []list.Item
 	for _, p := range store.GetAll() {
-		items = append(items, item{id: p.ID, name: p.Name, tags: p.Tags})
+		items = append(items, item{id: p.ID, name: p.Name, tags: p.Tags, text: p.Text})
 	}
 
-	l := list.New(items, itemDelegate{}, 20, 14)
+	delegate := list.NewDefaultDelegate()
+	delegate.Styles.SelectedTitle = lipgloss.NewStyle().Foreground(lipgloss.Color("170"))
+	delegate.Styles.SelectedDesc = lipgloss.NewStyle().Foreground(lipgloss.Color("240"))
+
+	l := list.New(items, delegate, 20, 14)
 	l.Title = "Your Prompts"
 	l.SetShowStatusBar(false)
 	l.SetFilteringEnabled(true)
@@ -102,6 +82,7 @@ func NewTUI(target string) (*tuiModel, error) {
 			key.NewBinding(key.WithKeys("c"), key.WithHelp("c", "create")),
 			key.NewBinding(key.WithKeys("e"), key.WithHelp("e", "edit")),
 			key.NewBinding(key.WithKeys("d"), key.WithHelp("d", "delete")),
+			key.NewBinding(key.WithKeys("/"), key.WithHelp("/", "filter")),
 		}
 	}
 
@@ -183,7 +164,7 @@ func (m *tuiModel) updateListView(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if ok {
 			p, found := m.store.Get(i.id)
 			if found {
-				Send(m.tmuxTarget, p.Text, true)
+				Send(m.tmuxTarget, p.Text, false)
 				m.quitting = true
 				return m, tea.Quit
 			}
@@ -241,7 +222,7 @@ func (m *tuiModel) updateFormView(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			// Refresh list
 			var items []list.Item
 			for _, pr := range m.store.GetAll() {
-				items = append(items, item{id: pr.ID, name: pr.Name, tags: pr.Tags})
+				items = append(items, item{id: pr.ID, name: pr.Name, tags: pr.Tags, text: pr.Text})
 			}
 			m.list.SetItems(items)
 			m.state = listView

@@ -53,6 +53,7 @@
     "patchedDependencies": {}
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.19.1"
+    "@effect/ai": "^0.31.0",
+    "@effect/platform-bun": "^0.81.1"
   }
 }
