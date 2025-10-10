@@ -23,13 +23,14 @@ const (
 
 // tuiModel is the main model for the TUI.
 type tuiModel struct {
-	store      *Store
-	list       list.Model
-	form       *Form
-	state      viewState
-	err        error
-	tmuxTarget string
-	quitting   bool
+	store         *Store
+	list          list.Model
+	form          *Form
+	state         viewState
+	err           error
+	tmuxTarget    string
+	quitting      bool
+	terminalWidth int
 }
 
 // Form represents the create/edit form.
@@ -126,8 +127,9 @@ func (m *tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.list.SetWidth(msg.Width)
 		m.list.SetHeight(msg.Height)
+		m.terminalWidth = msg.Width
 		if m.form != nil {
-			m.form.text.SetWidth(msg.Width)
+			m.form.text.SetWidth(msg.Width / 2)
 		}
 	}
 
@@ -210,14 +212,14 @@ func (m *tuiModel) updateListView(msg tea.Msg) (quit bool, cmd tea.Cmd) {
 		}
 	case key.Matches(keyMsg, key.NewBinding(key.WithKeys("c"))):
 		m.state = formView
-		m.form = NewCreateForm()
+		m.form = NewCreateForm(m.terminalWidth)
 	case key.Matches(keyMsg, key.NewBinding(key.WithKeys("e"))):
 		i, ok := m.list.SelectedItem().(item)
 		if ok {
 			p, found := m.store.Get(i.id)
 			if found {
 				m.state = formView
-				m.form = NewEditForm(p)
+				m.form = NewEditForm(p, m.terminalWidth)
 			}
 		}
 	case key.Matches(keyMsg, key.NewBinding(key.WithKeys("d"))):
@@ -271,31 +273,31 @@ func (m *tuiModel) updateFormView(msg tea.Msg) tea.Cmd {
 }
 
 // Form methods
-func NewCreateForm() *Form {
-	return newForm(nil)
+func NewCreateForm(terminalWidth int) *Form {
+	return newForm(nil, terminalWidth)
 }
 
-func NewEditForm(p Prompt) *Form {
-	form := newForm(&p.ID)
+func NewEditForm(p Prompt, terminalWidth int) *Form {
+	form := newForm(&p.ID, terminalWidth)
 	form.name.SetValue(p.Name)
 	form.text.SetValue(p.Text)
 	form.tags.SetValue(strings.Join(p.Tags, ","))
 	return form
 }
 
-func newForm(id *uuid.UUID) *Form {
+func newForm(id *uuid.UUID, terminalWidth int) *Form {
 	name := textinput.New()
 	name.Placeholder = "Prompt Name"
 	name.Focus()
-	name.Width = 50
+	name.Width = terminalWidth / 2
 
 	text := textarea.New()
 	text.Placeholder = "Prompt Text"
-	text.SetWidth(50)
+	text.SetWidth(terminalWidth / 2)
 
 	tags := textinput.New()
 	tags.Placeholder = "tag1,tag2,tag3"
-	tags.Width = 50
+	tags.Width = terminalWidth / 2
 
 	return &Form{
 		id:         id,
