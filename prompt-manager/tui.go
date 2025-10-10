@@ -2,6 +2,9 @@ package main
 
 import (
 	"fmt"
+	"log/slog"
+	"os"
+	"slices"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/key"
@@ -9,7 +12,6 @@ import (
 	"github.com/charmbracelet/bubbles/textarea"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
 	"github.com/google/uuid"
 )
 
@@ -50,7 +52,7 @@ type item struct {
 
 func (i item) FilterValue() string { return i.name + " " + i.text + " " + strings.Join(i.tags, " ") }
 func (i item) Title() string       { return i.name }
-func (i item) Description() string { return strings.Join(i.tags, ", ") }
+func (i item) Description() string { return "" }
 
 // NewTUI creates a new TUI model.
 func NewTUI(target string) (*tuiModel, error) {
@@ -65,16 +67,8 @@ func NewTUI(target string) (*tuiModel, error) {
 	}
 
 	delegate := list.NewDefaultDelegate()
-	delegate.Styles.SelectedTitle = lipgloss.NewStyle().Foreground(lipgloss.Color("170"))
-	delegate.Styles.SelectedDesc = lipgloss.NewStyle().Foreground(lipgloss.Color("240"))
-
 	l := list.New(items, delegate, 20, 14)
 	l.Title = "Your Prompts"
-	l.SetShowStatusBar(false)
-	l.SetFilteringEnabled(true)
-	l.Styles.Title = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
-	l.Styles.PaginationStyle = list.DefaultStyles().PaginationStyle.PaddingLeft(4)
-	l.Styles.HelpStyle = list.DefaultStyles().HelpStyle.PaddingLeft(4).PaddingBottom(1)
 
 	l.AdditionalShortHelpKeys = func() []key.Binding {
 		return []key.Binding{
@@ -82,7 +76,6 @@ func NewTUI(target string) (*tuiModel, error) {
 			key.NewBinding(key.WithKeys("c"), key.WithHelp("c", "create")),
 			key.NewBinding(key.WithKeys("e"), key.WithHelp("e", "edit")),
 			key.NewBinding(key.WithKeys("d"), key.WithHelp("d", "delete")),
-			key.NewBinding(key.WithKeys("/"), key.WithHelp("/", "filter")),
 		}
 	}
 
@@ -96,6 +89,13 @@ func NewTUI(target string) (*tuiModel, error) {
 
 // RunTUI starts the TUI.
 func RunTUI(targetPane string) error {
+	f, err := tea.LogToFile("debug.log", "debug")
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+	defer f.Close()
+
 	if !IsTmuxAvailable() {
 		return fmt.Errorf("tmux command not found")
 	}
@@ -115,23 +115,59 @@ func (m *tuiModel) Init() tea.Cmd {
 }
 
 func (m *tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	var cmds []tea.Cmd
 	var cmd tea.Cmd
+	var quit bool
+
+	slog.Info(fmt.Sprintf("Filtering state %v", m.list.FilterState()))
+	slog.Info(fmt.Sprintf("Filtering value %v", m.list.FilterValue()))
+	slog.Info(fmt.Sprintf("Filtering items %v", m.list.Items()))
 
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.list.SetWidth(msg.Width)
-		return m, nil
-
-	case tea.KeyMsg:
-		switch m.state {
-		case listView:
-			return m.updateListView(msg)
-		case formView:
-			return m.updateFormView(msg)
+		m.list.SetHeight(msg.Height)
+		if m.form != nil {
+			m.form.text.SetWidth(msg.Width)
+			m.form.text.SetHeight(msg.Height)
 		}
 	}
 
-	return m, cmd
+	switch m.state {
+	case listView:
+		quit, cmd = m.updateListView(msg)
+		// TODO yes this is a war crime but I dont want to make it nice I want
+		// to make it work this is because you cannot use batch with quit
+		// because of race conditions the program ends but one thread might be still
+		// running
+		if quit {
+			return m, tea.Quit
+		}
+		cmds = append(cmds, cmd)
+
+		m.list, cmd = m.list.Update(msg)
+		cmds = append(cmds, cmd)
+
+	case formView:
+		cmd = m.updateFormView(msg)
+		cmds = append(cmds, cmd)
+
+		var nameCmd, textCmd, tagsCmd tea.Cmd
+		m.form.name, nameCmd = m.form.name.Update(msg)
+		m.form.text, textCmd = m.form.text.Update(msg)
+		m.form.tags, tagsCmd = m.form.tags.Update(msg)
+		cmds = append(cmds, nameCmd, textCmd, tagsCmd)
+
+		for i := 0; i <= 2; i++ {
+			if i == m.form.focusIndex {
+				cmds = append(cmds, m.form.Focus(i))
+			} else {
+				m.form.Blur(i)
+			}
+		}
+	}
+
+	return m, tea.Batch(cmds...)
 }
 
 func (m *tuiModel) View() string {
@@ -148,63 +184,64 @@ func (m *tuiModel) View() string {
 	}
 }
 
-func (m *tuiModel) updateListView(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m *tuiModel) updateListView(msg tea.Msg) (quit bool, cmd tea.Cmd) {
+	keyMsg, ok := msg.(tea.KeyMsg)
+	quit = false
+	cmd = nil
+	if !ok {
+		return
+	}
+
 	if m.list.FilterState() == list.Filtering {
-		var cmd tea.Cmd
-		m.list, cmd = m.list.Update(msg)
-		return m, cmd
+		return
 	}
 
 	switch {
-	case key.Matches(msg, key.NewBinding(key.WithKeys("q", "ctrl+c"))):
+	case key.Matches(keyMsg, key.NewBinding(key.WithKeys("q", "ctrl+c"))):
 		m.quitting = true
-		return m, tea.Quit
-	case key.Matches(msg, key.NewBinding(key.WithKeys("enter"))):
+		return true, tea.Quit
+	case key.Matches(keyMsg, key.NewBinding(key.WithKeys("enter"))):
 		i, ok := m.list.SelectedItem().(item)
 		if ok {
 			p, found := m.store.Get(i.id)
 			if found {
 				Send(m.tmuxTarget, p.Text, false)
 				m.quitting = true
-				return m, tea.Quit
+				return true, tea.Quit
 			}
 		}
-		return m, nil
-	case key.Matches(msg, key.NewBinding(key.WithKeys("c"))):
+	case key.Matches(keyMsg, key.NewBinding(key.WithKeys("c"))):
 		m.state = formView
 		m.form = NewCreateForm()
-		return m, nil
-	case key.Matches(msg, key.NewBinding(key.WithKeys("e"))):
+	case key.Matches(keyMsg, key.NewBinding(key.WithKeys("e"))):
 		i, ok := m.list.SelectedItem().(item)
 		if ok {
 			p, found := m.store.Get(i.id)
 			if found {
 				m.state = formView
 				m.form = NewEditForm(p)
-				return m, nil
 			}
 		}
-		return m, nil
-	case key.Matches(msg, key.NewBinding(key.WithKeys("d"))):
+	case key.Matches(keyMsg, key.NewBinding(key.WithKeys("d"))):
 		i, ok := m.list.SelectedItem().(item)
 		if ok {
 			m.store.Remove(i.id)
 			m.list.RemoveItem(m.list.Index())
 		}
-		return m, nil
 	}
-
-	var cmd tea.Cmd
-	m.list, cmd = m.list.Update(msg)
-	return m, cmd
+	return
 }
 
-func (m *tuiModel) updateFormView(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m *tuiModel) updateFormView(msg tea.Msg) tea.Cmd {
+	keyMsg, ok := msg.(tea.KeyMsg)
+	if !ok {
+		return nil
+	}
+
 	switch {
-	case key.Matches(msg, key.NewBinding(key.WithKeys("esc"))):
+	case key.Matches(keyMsg, key.NewBinding(key.WithKeys("esc"))):
 		m.state = listView
-		return m, nil
-	case key.Matches(msg, key.NewBinding(key.WithKeys("enter"))):
+	case key.Matches(keyMsg, key.NewBinding(key.WithKeys("enter"))):
 		if m.form.focusIndex == 2 { // On tags input
 			// Save logic
 			p := Prompt{
@@ -229,24 +266,10 @@ func (m *tuiModel) updateFormView(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		} else {
 			m.form.focusIndex = (m.form.focusIndex + 1) % 3
 		}
-	case key.Matches(msg, key.NewBinding(key.WithKeys("tab"))):
+	case key.Matches(keyMsg, key.NewBinding(key.WithKeys("tab"))):
 		m.form.focusIndex = (m.form.focusIndex + 1) % 3
 	}
-
-	cmds := make([]tea.Cmd, 3)
-	m.form.name, cmds[0] = m.form.name.Update(msg)
-	m.form.text, cmds[1] = m.form.text.Update(msg)
-	m.form.tags, cmds[2] = m.form.tags.Update(msg)
-
-	for i := 0; i <= 2; i++ {
-		if i == m.form.focusIndex {
-			cmds[i] = m.form.Focus(i)
-		} else {
-			m.form.Blur(i)
-		}
-	}
-
-	return m, tea.Batch(cmds...)
+	return nil
 }
 
 // Form methods
