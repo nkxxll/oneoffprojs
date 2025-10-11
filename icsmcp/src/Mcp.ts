@@ -1,46 +1,32 @@
 import { McpServer, Tool, Toolkit } from "@effect/ai";
 import { BunSink, BunStream } from "@effect/platform-bun";
 import { Effect, Layer, Logger, Schema } from "effect";
+import { ICSToolImplLayer, ICSToolkitLayer } from "./Tools.js";
 
 const TestPrompt = McpServer.prompt({
-  name: "Test Prompt",
-  description: "A test prompt to demonstrate MCP server capabilities",
+  name: "Event",
+  description: "Enter an event through this template",
   parameters: Schema.Struct({
-    flightNumber: Schema.String,
+    start: Schema.String,
+    end: Schema.String,
+    day: Schema.String,
   }),
   completion: {
-    flightNumber: () => Effect.succeed(["FL123", "FL456", "FL789"]),
+    start: () => Effect.succeed([]),
+    end: () => Effect.succeed([]),
+    day: () => Effect.succeed([":today", ":tomorrow", ":nextweek"]),
   },
-  content: ({ flightNumber }) =>
+  content: ({ start, end, day }) =>
     Effect.succeed(
-      `Get the booking details for flight number: ${flightNumber}`,
+      `Book an event with the start at ${start}, the end at ${end} and day ${day} use the EventCreator tool.`,
     ),
 });
 
-const ICSTool = Tool.make("EventCreator", {
-  description: "Create an ICS file with the start time and the end time",
-  parameters: {
-    start: Schema.Number,
-    end: Schema.Number,
-  },
-  success: Schema.String,
-}).annotate(Tool.Idempotent, true);
-
-const ServerToolKit = Toolkit.make(ICSTool);
-
-const TestTool = McpServer.toolkit(ServerToolKit);
-
-const ServerToolKitLayer = ServerToolKit.toLayer({
-  EventCreator: ({ start, end }) =>
-    Effect.succeed(
-      `This is the test for the first tool in the ICS MCP server the start was ${start} the end was ${end}!`,
-    ),
-});
 
 // Merge all the resources and prompts into a single server layer
 export const ServerLayer = Layer.mergeAll(
   TestPrompt,
-  TestTool.pipe(Layer.provide(ServerToolKitLayer)),
+  ICSToolkitLayer.pipe(Layer.provide(ICSToolImplLayer)),
 ).pipe(
   Layer.provide(
     McpServer.layerStdio({
