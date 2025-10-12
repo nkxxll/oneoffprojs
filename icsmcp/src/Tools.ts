@@ -1,35 +1,36 @@
 import { McpServer, Toolkit } from "@effect/ai";
 import { Tool } from "@effect/ai";
 import { Effect, Schema } from "effect";
-import { EventParams } from "./Models.js";
+import { CalendarParams, EventParams } from "./Models.js";
+import { generateIcsString } from "./ICS.js";
 
-const createEvent = (
-  params: { readonly description?: string | undefined } & {
-    readonly start: string;
-  } & { readonly end?: string | undefined } & {
-    readonly duration?: string | undefined;
-  } & { readonly title: string } & { readonly location?: string | undefined },
-) =>
+const validateEvent = (params: EventParams) =>
   Effect.gen(function* () {
-    return "hey ho this needs to be implemented";
+    return JSON.stringify(params);
   });
 
-const CreateEvent = Tool.make("CreateEvent", {
+// yes this is just a wrapper that does nothing but if in the future there has
+// to be some validation logic or so I want that to be handled here
+const createCalendar = (params: CalendarParams) =>
+  generateIcsString(params.calendarList);
+
+const ValidateEvent = Tool.make("ValidateEvent", {
   description: "Create an ICS file with the start time and the end time",
   parameters: EventParams,
   success: Schema.String,
 }).annotate(Tool.Idempotent, true);
 
 const CreateCalendar = Tool.make("CreateCalendar", {
+  parameters: CalendarParams,
   description: "Create an ICS file with the start time and the end time",
   success: Schema.String,
 }).annotate(Tool.Readonly, true);
 
-const ICSToolkit = Toolkit.make(CreateEvent, CreateCalendar);
+const ICSToolkit = Toolkit.make(ValidateEvent, CreateCalendar);
 
 export const ICSToolkitLayer = McpServer.toolkit(ICSToolkit);
 
 export const ICSToolImplLayer = ICSToolkit.toLayer({
-  CreateEvent: (params) => createEvent(params),
-  CreateCalendar: () => Effect.succeed(`not implemented yet`),
+  ValidateEvent: (params) => validateEvent(params),
+  CreateCalendar: (params) => createCalendar(params),
 });
