@@ -3,6 +3,10 @@
 Predefined prompts are the future of agentic work! **Prompt manager** is an tui application that
 works with Tmux to stream saved prompts into a coding agent.
 
+## Gif
+
+![demo tape](./assets/prompt-manager-demo.gif)
+
 ## Motivation
 
 I did write something similar for the web but it does not work because the ux is too bad I type
@@ -12,51 +16,41 @@ lets you manage your prompts CRUD in a file that can be synced with version cont
 
 Important Questions:
 
-- Is this an overkill could you just use a shell script like my poc that I used before? Yes
-- Can gemini write this in one to two days of work? Yes
+- Is this an overkill could you just use a shell script like my PoC that I used before? Yes
+- Can `gemini` write this in one to two days of work? Yes
 - Will I do this because I can? Yes
 
 ## Requirements
 
-- [ ] cli interface
+- [x] cli interface
 
   ```
-  Usage: prompt-cli [command] [options]
+  Usage:
+    prompt-manager [flags]
+    prompt-manager [command]
 
-  Manage your prompt collection from the terminal.
+  Available Commands:
+    completion  Generate the autocompletion script for the specified shell
+    create      Create a new prompt
+    help        Help about any command
+    list        List all prompts
+    remove      Remove a prompt
+    search      Search for prompts by name or tag
+    update      Update an existing prompt
 
-  Commands:
-    create   Create a new prompt.
-    remove   Delete a prompt by ID or name.
-    update   Update an existing prompt.
-    display  List all prompts or display a specific prompt.
-    search   Search prompts by keyword or tag.
-    help     Show this help message.
-
-  Options:
-    -n, --name <name>          Prompt name.
-    -i, --id <id>              Prompt ID.
-    -p, --prompt <text>        Prompt text.
-    -t, --target <window id>   Tmux target window.
-    -f, --force                Force deletion without confirmation.
-    -v, --verbose              Show detailed output.
-    -h, --help                 Display this help message.
-
-  Examples:
-    prompt-cli create -n "Summarize Article" -d "Summarizes articles" -t "summary,writing"
-    prompt-cli update -i 42 -d "Updated description"
-    prompt-cli display
-    prompt-cli remove -i 42 -f
-    prompt-cli -t @6
+  Flags:
+    -h, --help            help for prompt-manager
+    -t, --target string   tmux target pane (e.g., session:window.pane)
   ```
 
-- [ ] write a tui to do the same things interactively
+- [x] write a tui to do the same things interactively
 
 ## Sturcture
 
-- `promptcli.go` entry point
+- `main.go` entry point
 - `cli.go` cli argument parsing and logic
 - `tui.go` bubble tea code that defines the tui
 - `storage.go` manages the prompt file
 - `tmux.go` calls the Tmux application handles possible errors with the call
 - `fzf.go` calls the fzf application so you can choose a prompt.
+- `promptparser.go` parses templated prompts

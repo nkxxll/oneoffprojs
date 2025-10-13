@@ -23,6 +23,6 @@ will automate some task for me. Very sloppy, ...
 
 ## prompt manager
 
-- manage pre-written prompts for coding agents
-- poc works
-- some TODOs still 🚧
+- manage and pre-write prompts for coding agents
+- input them via Tmux into the window where your agent is currently running
+- for the best experience assign a keymap in your `tmux.conf`
