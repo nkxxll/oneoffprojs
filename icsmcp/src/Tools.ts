@@ -21,41 +21,37 @@ const createCalendar = (params: CalendarParams) =>
 const ValidateEvent = Tool.make("ValidateEvent", {
   description: "Validate an ICS event",
   parameters: EventParams,
-  success: Schema.Union(
-    Schema.Struct({
-      type: Schema.String,
-      text: Schema.String,
+  success: Schema.Struct({
+    type: Schema.String,
+    text: Schema.String,
+  }),
+  failure: Schema.Struct({
+    type: Schema.Literal("error"),
+    error: Schema.Struct({
+      message: Schema.String,
+      code: Schema.String,
     }),
-    Schema.Struct({
-      type: Schema.Literal("error"),
-      error: Schema.Struct({
-        message: Schema.String,
-        code: Schema.String,
-      }),
-    }),
-  ),
+  }),
 }).annotate(Tool.Idempotent, true);
 
 const CreateCalendar = Tool.make("CreateCalendar", {
   parameters: CalendarParams,
   description: "Create an ICS file with the start time and the end time",
-  success: Schema.Union(
-    Schema.Struct({
-      type: Schema.Literal("resource"),
-      resource: Schema.Struct({
-        uri: Schema.String,
-        mimeType: Schema.String,
-        text: Schema.String,
-      }),
+  success: Schema.Struct({
+    type: Schema.Literal("resource"),
+    resource: Schema.Struct({
+      uri: Schema.String,
+      mimeType: Schema.String,
+      text: Schema.String,
     }),
-    Schema.Struct({
-      type: Schema.Literal("error"),
-      error: Schema.Struct({
-        message: Schema.String,
-        code: Schema.String,
-      }),
+  }),
+  failure: Schema.Struct({
+    type: Schema.Literal("error"),
+    error: Schema.Struct({
+      message: Schema.String,
+      code: Schema.String,
     }),
-  ),
+  }),
 }).annotate(Tool.Readonly, true);
 
 const ICSToolkit = Toolkit.make(ValidateEvent, CreateCalendar);
@@ -67,7 +63,7 @@ export const ICSToolImplLayer = ICSToolkit.toLayer({
     validateEvent(params).pipe(
       Effect.catchTags({
         InvalidStartDateError: (e) =>
-          Effect.succeed({
+          Effect.fail({
             type: "error" as const,
             error: {
               message: `Invalid start date: ${e.dateString}`,
@@ -75,7 +71,7 @@ export const ICSToolImplLayer = ICSToolkit.toLayer({
             },
           } as const),
         InvalidEndDateError: (e) =>
-          Effect.succeed({
+          Effect.fail({
             type: "error" as const,
             error: {
               message: `Invalid end date: ${e.dateString}`,
@@ -83,7 +79,7 @@ export const ICSToolImplLayer = ICSToolkit.toLayer({
             },
           } as const),
         InvalidDurationError: (e) =>
-          Effect.succeed({
+          Effect.fail({
             type: "error" as const,
             error: {
               message: `Invalid duration: ${e.duration}ms`,
@@ -91,7 +87,7 @@ export const ICSToolImplLayer = ICSToolkit.toLayer({
             },
           } as const),
         InvalidTitleError: (e) =>
-          Effect.succeed({
+          Effect.fail({
             type: "error" as const,
             error: {
               message: `Invalid title: ${e.title}`,
@@ -104,7 +100,7 @@ export const ICSToolImplLayer = ICSToolkit.toLayer({
     createCalendar(params).pipe(
       Effect.catchTags({
         InvalidStartDateError: (e) =>
-          Effect.succeed({
+          Effect.fail({
             type: "error" as const,
             error: {
               message: `Invalid start date: ${e.dateString}`,
@@ -112,7 +108,7 @@ export const ICSToolImplLayer = ICSToolkit.toLayer({
             },
           } as const),
         InvalidEndDateError: (e) =>
-          Effect.succeed({
+          Effect.fail({
             type: "error" as const,
             error: {
               message: `Invalid end date: ${e.dateString}`,
@@ -120,7 +116,7 @@ export const ICSToolImplLayer = ICSToolkit.toLayer({
             },
           } as const),
         InvalidDurationError: (e) =>
-          Effect.succeed({
+          Effect.fail({
             type: "error" as const,
             error: {
               message: `Invalid duration: ${e.duration}ms`,
@@ -128,7 +124,7 @@ export const ICSToolImplLayer = ICSToolkit.toLayer({
             },
           } as const),
         EndBeforeStartError: (e) =>
-          Effect.succeed({
+          Effect.fail({
             type: "error" as const,
             error: {
               message: `End date ${e.end.toISOString()} is before start date ${e.start.toISOString()}`,
@@ -136,7 +132,7 @@ export const ICSToolImplLayer = ICSToolkit.toLayer({
             },
           } as const),
         InvalidTitleError: (e) =>
-          Effect.succeed({
+          Effect.fail({
             type: "error" as const,
             error: {
               message: `Invalid title: ${e.title}`,
