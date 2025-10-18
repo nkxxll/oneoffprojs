@@ -133,17 +133,6 @@ export const validateIcsEvent = (event: EventParams) =>
     return event;
   });
 
-const createIcsFileResponse = (content: string) => {
-  return {
-    type: "resource" as const,
-    resource: {
-      uri: "resource://calendar.ics",
-      mimeType: "text/calendar",
-      text: content,
-    },
-  };
-};
-
 export const generateIcsString = (events: readonly EventParams[]) =>
   Effect.gen(function* () {
     // Validate all events first
@@ -173,6 +162,5 @@ export const generateIcsString = (events: readonly EventParams[]) =>
 
     lines.push("END:VCALENDAR");
     const content = lines.join("\r\n");
-    const response = createIcsFileResponse(content);
-    return response;
+    return content;
   });
