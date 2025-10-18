@@ -2,8 +2,9 @@ package main
 
 import (
 	"fmt"
+	"io"
+	"log"
 	"log/slog"
-	"os"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/key"
@@ -100,12 +101,13 @@ func NewTUI(target string) (*tuiModel, error) {
 
 // RunTUI starts the TUI.
 func RunTUI(targetPane string) error {
-	f, err := tea.LogToFile("debug.log", "debug")
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-	defer f.Close()
+	log.SetOutput(io.Discard)
+	// f, err := tea.LogToFile("debug.log", "debug")
+	// if err != nil {
+	// 	fmt.Println(err)
+	// 	os.Exit(1)
+	// }
+	// defer f.Close()
 
 	if !IsTmuxAvailable() {
 		return fmt.Errorf("tmux command not found")
@@ -223,11 +225,11 @@ func (m *tuiModel) updateListView(msg tea.Msg) (quit bool, cmd tea.Cmd) {
 	quit = false
 	cmd = nil
 	if !ok {
-		return
+		return quit, cmd
 	}
 
 	if m.list.FilterState() == list.Filtering {
-		return
+		return quit, cmd
 	}
 
 	switch {
@@ -271,7 +273,7 @@ func (m *tuiModel) updateListView(msg tea.Msg) (quit bool, cmd tea.Cmd) {
 			m.list.RemoveItem(m.list.Index())
 		}
 	}
-	return
+	return quit, cmd
 }
 
 func (m *tuiModel) updateFormView(msg tea.Msg) tea.Cmd {
