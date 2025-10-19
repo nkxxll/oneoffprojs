@@ -18,29 +18,6 @@ Is able to create an ICS Calendar File
 `),
 });
 
-/** NOTE: elicit takes a schema that has to have a decode and an encode capability
- * the decoding has to return a plain object this is indicated by the signature/type template:
- * ```js
- * <S extends Schema.Codec<any, Record<string, unknown>, any, any>>
- * ```
- * Schema.Struct({ age: Schema.Number, name: Schema.String }) e.g. creates a plain object when decoded
- * Schema.Record({ key: Schema.Literal("age"), value: Schema.Number }) is the same as a struct with age
- * what you can do with a record is give a type for the key like Schema.Number and a schema for the value like
- * { start: number, end: number ... } for an event then you can get a
- * { 1: { start... }, 2: <event 2>, 3: <event 3> }
- */
-// todo: just don't know how to use this thing yet
-// const CalendarType = McpServer.elicit({
-//   message: `Please provide the calendar type you are using: "apple" | "other" (default "apple")`,
-//   schema: Schema.Struct({
-//     calendar_type: Schema.Union(
-//       Schema.Literal("apple"),
-//       Schema.Literal("other"),
-//     ),
-//   }),
-// });
-
-
 const EventPrompt = McpServer.prompt({
   name: "Event",
   description: "Enter an event through this template",
