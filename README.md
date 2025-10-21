@@ -26,3 +26,10 @@ will automate some task for me. Very sloppy, ...
 - manage and pre-write prompts for coding agents
 - input them via Tmux into the window where your agent is currently running
 - for the best experience assign a keymap in your `tmux.conf`
+
+## stdioproxy (idea 🚧)
+
+- so I want to run MCP servers on my pi and I want to use them from my mac and Claude code
+- the goal is to create an MCP proxy that is one stdio MCP server that can talk to multiple http MCP
+  servers and forward their messages
+- that way I can use free tier of Claude and use multiple servers that run on the local network
