@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/BurntSushi/toml"
 	"github.com/fsnotify/fsnotify"
@@ -50,16 +49,17 @@ type ServerState struct {
 	Client  *mcp.Client
 	Session *mcp.ClientSession
 	Name    string
+	URL     string
 	Ctx     context.Context
 	Tools   []*mcp.Tool
 }
 
 type ServerManager struct {
-	mu       sync.RWMutex
-	servers  map[string]*ServerState
-	server   *mcp.Server
-	logger   *slog.Logger
-	config   Config
+	mu      sync.RWMutex
+	servers map[string]*ServerState
+	server  *mcp.Server
+	logger  *slog.Logger
+	config  Config
 }
 
 func WrapFuncWithClient(cc context.Context, cs *mcp.ClientSession, serverName string, logger *slog.Logger) mcp.ToolHandlerFor[any, any] {
@@ -137,6 +137,7 @@ func (sm *ServerManager) ConnectServer(serverConfig McpServer) error {
 		Client:  c,
 		Session: session,
 		Name:    serverConfig.Name,
+		URL:     serverConfig.URL,
 		Ctx:     ctx,
 		Tools:   prefixedTools,
 	}
@@ -171,21 +172,23 @@ func (sm *ServerManager) DisconnectServer(serverName string) error {
 }
 
 func (sm *ServerManager) ReloadConfig(newConfig Config) {
-	sm.mu.Lock()
-	defer sm.mu.Unlock()
-
 	sm.logger.Info("reloading config")
 
 	// Create maps for current and new servers
 	currentServers := make(map[string]bool)
+	sm.mu.RLock()
 	for name := range sm.servers {
 		currentServers[name] = true
 	}
+	sm.mu.RUnlock()
 
 	newServers := make(map[string]McpServer)
 	for _, srv := range newConfig.Servers {
 		newServers[srv.Name] = srv
 	}
+
+	sm.logger.Debug("new servers are", "servers", newServers)
+	sm.logger.Debug("currentServers", "current", currentServers)
 
 	// Disconnect servers that are no longer in config
 	for name := range currentServers {
@@ -194,24 +197,36 @@ func (sm *ServerManager) ReloadConfig(newConfig Config) {
 		}
 	}
 
+	sm.logger.Debug("after disconnecting the servers that are not there any more")
+
 	// Connect new servers or update existing ones
 	for name, srv := range newServers {
+		sm.logger.Debug("looping through new servers", "name", name)
 		if _, exists := currentServers[name]; !exists {
 			// New server
 			if err := sm.ConnectServer(srv); err != nil {
 				sm.logger.Error("failed to connect new server", "server", name, "error", err)
 			}
 		} else {
-			// TODO: Check if URL changed and reconnect if necessary
-			sm.logger.Info("server already connected, skipping", "server", name)
+			// Check if URL changed and reconnect if necessary
+			sm.mu.RLock()
+			state := sm.servers[name]
+			sm.mu.RUnlock()
+			if state.URL != srv.URL {
+				sm.logger.Info("server URL changed, reconnecting", "server", name, "oldURL", state.URL, "newURL", srv.URL)
+				sm.DisconnectServer(name)
+				if err := sm.ConnectServer(srv); err != nil {
+					sm.logger.Error("failed to reconnect server", "server", name, "error", err)
+				}
+			} else {
+				sm.logger.Info("server already connected, skipping", "server", name)
+			}
 		}
 	}
-	// TODO: we have to notfify the client from the proxy here that there is a
-	// new list of tools else we only have the new server in the local
-	// capabilities and the client of the proxy still does not know that there
-	// are new tools
 
+	sm.mu.Lock()
 	sm.config = newConfig
+	sm.mu.Unlock()
 	sm.logger.Info("config reloaded")
 }
 
@@ -231,28 +246,22 @@ func watchConfig(configPath string, manager *ServerManager, logger *slog.Logger)
 
 	logger.Info("watching config file", "path", configPath)
 
-	var debounceTimer *time.Timer
-	debounceDuration := 1000 * time.Millisecond
-
 	for {
 		select {
 		case event, ok := <-watcher.Events:
 			if !ok {
+				logger.Warn("wather event was not ok")
 				return
 			}
+			logger.Debug("received watcher event", "event", event)
 			if event.Has(fsnotify.Write) {
-				// Debounce rapid writes
-				if debounceTimer != nil {
-					debounceTimer.Stop()
+				logger.Debug("received notify write")
+				newConfig := loadConfig(logger)
+				if newConfig.Servers == nil {
+					logger.Error("invalid config loaded")
+					return
 				}
-				debounceTimer = time.AfterFunc(debounceDuration, func() {
-					newConfig := loadConfig(logger)
-					if newConfig.Servers == nil {
-						logger.Error("invalid config loaded")
-						return
-					}
-					manager.ReloadConfig(newConfig)
-				})
+				manager.ReloadConfig(newConfig)
 			}
 		case err, ok := <-watcher.Errors:
 			if !ok {
@@ -264,7 +273,7 @@ func watchConfig(configPath string, manager *ServerManager, logger *slog.Logger)
 }
 
 func main() {
-	logger := slog.New(slog.NewTextHandler(os.Stderr, nil))
+	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelDebug}))
 	config := NewConfig(logger)
 	logger.Info(fmt.Sprintln("Config", config))
 
