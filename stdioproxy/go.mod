@@ -3,7 +3,7 @@ module stdioproxy
 go 1.24.5
 
 require (
-	github.com/joho/godotenv v1.5.1
+	github.com/BurntSushi/toml v1.5.0
 	github.com/modelcontextprotocol/go-sdk v1.0.0
 )
 
