@@ -43,14 +43,6 @@ func NewConfig(logger *slog.Logger) Config {
 	return loadConfig(logger)
 }
 
-type Input struct {
-	Name string `json:"name" jsonschema:"the name of the person to greet"`
-}
-
-type Output struct {
-	Greeting string `json:"greeting" jsonschema:"the greeting to tell to the user"`
-}
-
 type ServerState struct {
 	Client  *mcp.Client
 	Session *mcp.ClientSession
@@ -58,12 +50,10 @@ type ServerState struct {
 	Ctx     context.Context
 }
 
-// todo this function is not generic it is very adjusted to the example code
-// can you make it generic for any input and output
-func WrapFuncWithClient(cc context.Context, cs *mcp.ClientSession, serverName string, logger *slog.Logger) mcp.ToolHandlerFor[Input, Output] {
-	handler := func(ctx context.Context, req *mcp.CallToolRequest, input Input) (
+func WrapFuncWithClient(cc context.Context, cs *mcp.ClientSession, serverName string, logger *slog.Logger) mcp.ToolHandlerFor[any, any] {
+	handler := func(ctx context.Context, req *mcp.CallToolRequest, input any) (
 		*mcp.CallToolResult,
-		Output,
+		any,
 		error,
 	) {
 		toolName := strings.TrimPrefix(req.Params.Name, serverName+"-")
@@ -72,12 +62,13 @@ func WrapFuncWithClient(cc context.Context, cs *mcp.ClientSession, serverName st
 			Arguments: req.Params.Arguments,
 		})
 		if err != nil {
-			return nil, Output{""}, err
+			return nil, nil, err
 		}
-		if textContent, ok := result.Content[0].(*mcp.TextContent); ok {
-			return nil, Output{Greeting: textContent.Text}, nil
+		if len(result.Content) == 0 {
+			return nil, nil, fmt.Errorf("no content in result")
 		}
-		return nil, Output{""}, fmt.Errorf("Content type does not fit")
+		// Forward the content from the remote result
+		return nil, result.Content, nil
 	}
 	return handler
 }
@@ -111,14 +102,12 @@ func main() {
 		logger.Info("tools available", "server", srv.Name, "count", len(tools.Tools), "tools", toolNames)
 
 		for _, tool := range tools.Tools {
-			if tool.Name == "greet" {
-				prefixedTool := &mcp.Tool{
-					Name:        srv.Name + "-" + tool.Name,
-					Description: tool.Description,
-					InputSchema: tool.InputSchema,
-				}
-				mcp.AddTool(server, prefixedTool, WrapFuncWithClient(ctx, session, srv.Name, logger))
+			prefixedTool := &mcp.Tool{
+				Name:        srv.Name + "-" + tool.Name,
+				Description: tool.Description,
+				InputSchema: tool.InputSchema,
 			}
+			mcp.AddTool(server, prefixedTool, WrapFuncWithClient(ctx, session, srv.Name, logger))
 		}
 	}
 	if len(states) == 0 {
