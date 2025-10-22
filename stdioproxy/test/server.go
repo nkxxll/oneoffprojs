@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"log"
 	"net/http"
 	"time"
@@ -68,9 +69,13 @@ func SayHi(ctx context.Context, req *mcp.CallToolRequest, input Input) (
 }
 
 func main() {
-	url := "localhost:3000"
+	name := flag.String("n", "greeter2", "server name")
+	port := flag.String("p", "3001", "server port")
+	flag.Parse()
+
+	url := "localhost:" + *port
 	// Create a server with a single tool.
-	server := mcp.NewServer(&mcp.Implementation{Name: "greeter", Version: "v1.0.0"}, nil)
+	server := mcp.NewServer(&mcp.Implementation{Name: *name, Version: "v1.0.0"}, nil)
 	mcp.AddTool(server, &mcp.Tool{Name: "greet", Description: "say hi"}, SayHi)
 	// Create the streamable HTTP handler.
 	handler := mcp.NewStreamableHTTPHandler(func(req *http.Request) *mcp.Server {
@@ -79,6 +84,7 @@ func main() {
 
 	handlerWithLogging := loggingHandler(handler)
 
+	log.Printf("Starting server %s on %s", *name, url)
 	// Start the HTTP server with logging handler.
 	if err := http.ListenAndServe(url, handlerWithLogging); err != nil {
 		log.Fatalf("Server failed: %v", err)

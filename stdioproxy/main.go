@@ -206,6 +206,10 @@ func (sm *ServerManager) ReloadConfig(newConfig Config) {
 			sm.logger.Info("server already connected, skipping", "server", name)
 		}
 	}
+	// TODO: we have to notfify the client from the proxy here that there is a
+	// new list of tools else we only have the new server in the local
+	// capabilities and the client of the proxy still does not know that there
+	// are new tools
 
 	sm.config = newConfig
 	sm.logger.Info("config reloaded")
@@ -227,9 +231,8 @@ func watchConfig(configPath string, manager *ServerManager, logger *slog.Logger)
 
 	logger.Info("watching config file", "path", configPath)
 
-	// Debounce timer
 	var debounceTimer *time.Timer
-	debounceDuration := 100 * time.Millisecond
+	debounceDuration := 1000 * time.Millisecond
 
 	for {
 		select {
@@ -275,10 +278,7 @@ func main() {
 		}
 	}
 
-	// Check if any servers connected
-	manager.mu.RLock()
 	serverCount := len(manager.servers)
-	manager.mu.RUnlock()
 
 	if serverCount == 0 {
 		logger.Error("no servers connected")
