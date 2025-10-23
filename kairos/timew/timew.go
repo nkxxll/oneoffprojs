@@ -186,3 +186,13 @@ func Export(period string, from, to *time.Time) (string, error) {
 	}
 	return result.Output, nil
 }
+
+// InspectTracker inspects the currently running tracker
+func InspectTracker() (string, error) {
+	args := []string{}
+	result, err := ExecuteCommand(args)
+	if err != nil {
+		return "", fmt.Errorf("failed to inspect tracker: %s", result.Error)
+	}
+	return result.Output, nil
+}

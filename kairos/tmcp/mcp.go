@@ -3,10 +3,12 @@ package tmcp
 import (
 	"context"
 	"fmt"
+	"kairos/timew"
+	"log"
+	"net/http"
 	"time"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
-	"kairos/timew"
 )
 
 // Input and output structs for tools
@@ -64,6 +66,13 @@ type ExportOutput struct {
 	Export string `json:"export" jsonschema:"the exported data"`
 }
 
+type InspectTrackerInput struct {
+}
+
+type InspectTrackerOutput struct {
+	Status string `json:"status" jsonschema:"the current status of the time tracker"`
+}
+
 // Handlers
 
 func HandleStartTimer(ctx context.Context, req *mcp.CallToolRequest, input StartTimerInput) (*mcp.CallToolResult, StartTimerOutput, error) {
@@ -114,6 +123,14 @@ func HandleExport(ctx context.Context, req *mcp.CallToolRequest, input ExportInp
 	return nil, ExportOutput{Export: export}, nil
 }
 
+func HandleInspectTracker(ctx context.Context, req *mcp.CallToolRequest, input InspectTrackerInput) (*mcp.CallToolResult, InspectTrackerOutput, error) {
+	status, err := timew.InspectTracker()
+	if err != nil {
+		return nil, InspectTrackerOutput{}, err
+	}
+	return nil, InspectTrackerOutput{Status: status}, nil
+}
+
 // CreateServer creates and returns the MCP server with all tools
 func CreateServer() *mcp.Server {
 	server := mcp.NewServer(&mcp.Implementation{Name: "kairos-timew", Version: "1.0.0"}, nil)
@@ -125,12 +142,60 @@ func CreateServer() *mcp.Server {
 	mcp.AddTool(server, &mcp.Tool{Name: "remove_entry", Description: "Remove an entry by ID"}, HandleRemoveEntry)
 	mcp.AddTool(server, &mcp.Tool{Name: "summary", Description: "Get a summary of time tracking data for a period (week, day, month)"}, HandleSummary)
 	mcp.AddTool(server, &mcp.Tool{Name: "export", Description: "Export time tracking entries for a period or date range"}, HandleExport)
+	mcp.AddTool(server, &mcp.Tool{Name: "inspect_tracker", Description: "Inspect the currently running time tracker"}, HandleInspectTracker)
 
 	return server
 }
 
+// responseWriter wraps http.ResponseWriter to capture the status code.
+type responseWriter struct {
+	http.ResponseWriter
+	statusCode int
+}
+
+func (rw *responseWriter) WriteHeader(code int) {
+	rw.statusCode = code
+	rw.ResponseWriter.WriteHeader(code)
+}
+
+func loggingHandler(handler http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		start := time.Now()
+
+		// Create a response writer wrapper to capture status code.
+		wrapped := &responseWriter{ResponseWriter: w, statusCode: http.StatusOK}
+
+		// Log request details.
+		log.Printf("[REQUEST] %s | %s | %s %s",
+			start.Format(time.RFC3339),
+			r.RemoteAddr,
+			r.Method,
+			r.URL.Path)
+
+		// Call the actual handler.
+		handler.ServeHTTP(wrapped, r)
+
+		// Log response details.
+		duration := time.Since(start)
+		log.Printf("[RESPONSE] %s | %s | %s %s | Status: %d | Duration: %v",
+			time.Now().Format(time.RFC3339),
+			r.RemoteAddr,
+			r.Method,
+			r.URL.Path,
+			wrapped.statusCode,
+			duration)
+	})
+}
+
 // RunServer runs the MCP server over stdio
-func RunServer() error {
+func RunServer(url string) error {
 	server := CreateServer()
-	return server.Run(context.Background(), &mcp.StdioTransport{})
+	// Create the streamable HTTP handler.
+	handler := mcp.NewStreamableHTTPHandler(func(req *http.Request) *mcp.Server {
+		return server
+	}, nil)
+
+	handlerWithLogging := loggingHandler(handler)
+	// Start the HTTP server with logging handler.
+	return http.ListenAndServe(url, handlerWithLogging)
 }

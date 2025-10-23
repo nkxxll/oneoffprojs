@@ -221,6 +221,23 @@ var exportCmd = &cobra.Command{
 	},
 }
 
+var inspectCmd = &cobra.Command{
+	Use:   "inspect",
+	Short: "Inspect the currently running time tracker",
+	Run: func(cmd *cobra.Command, args []string) {
+		session, err := connectToServer()
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer session.Close()
+		output, err := callTool(session, "inspect_tracker", map[string]any{})
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Print(output)
+	},
+}
+
 func init() {
 	rootCmd.PersistentFlags().StringVar(&url, "url", "localhost:3000", "URL to the MCP server")
 	startCmd.Flags().String("start-time", "", "Start time in RFC3339 format")
@@ -237,6 +254,7 @@ func init() {
 	rootCmd.AddCommand(removeCmd)
 	rootCmd.AddCommand(summaryCmd)
 	rootCmd.AddCommand(exportCmd)
+	rootCmd.AddCommand(inspectCmd)
 }
 
 func main() {
