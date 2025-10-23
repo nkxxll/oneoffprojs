@@ -1,11 +1,14 @@
 package main
 
 import (
-	"kairos/timew"
+	"log"
+
 	"kairos/tmcp"
 )
 
 func main() {
-	timew.Hello()
-	tmcp.Hello()
+	log.Println("Starting MCP server...")
+	if err := tmcp.RunServer(); err != nil {
+		log.Fatal(err)
+	}
 }

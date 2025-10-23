@@ -4,7 +4,7 @@ BINARY_CLIENT := client
 BUILD_DIR := build
 
 # Targets
-.PHONY: all clean linux mac
+.PHONY: all clean linux mac local
 
 all: linux mac
 
@@ -41,6 +41,17 @@ $(BUILD_DIR)/darwin-arm64/$(BINARY_SERVER): server/server.go
 $(BUILD_DIR)/darwin-arm64/$(BINARY_CLIENT): client/client.go
 	@echo "Building client for macOS ARM64..."
 	GOOS=darwin GOARCH=arm64 go build -o $@ ./client
+
+# --- Local build for current platform ---
+local: $(BUILD_DIR)/$(BINARY_SERVER) $(BUILD_DIR)/$(BINARY_CLIENT)
+
+$(BUILD_DIR)/$(BINARY_SERVER): server/server.go
+	@echo "Building server for local platform..."
+	go build -o $@ ./server
+
+$(BUILD_DIR)/$(BINARY_CLIENT): client/client.go
+	@echo "Building client for local platform..."
+	go build -o $@ ./client
 
 # --- Cleanup ---
 clean:
