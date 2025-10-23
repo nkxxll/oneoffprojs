@@ -12,56 +12,56 @@ import (
 // Input and output structs for tools
 
 type StartTimerInput struct {
-	Name      string     `json:"name" jsonschema:"required,description=The name of the timer to start"`
-	StartTime *time.Time `json:"start_time,omitempty" jsonschema:"description=Optional start time for the timer"`
+	Name      string     `json:"name" jsonschema:"the name of the timer to start"`
+	StartTime *time.Time `json:"start_time,omitempty" jsonschema:"optional start time for the timer"`
 }
 
 type StartTimerOutput struct {
-	Message string `json:"message" jsonschema:"The result message"`
+	Message string `json:"message" jsonschema:"the result message"`
 }
 
 type StopTimerInput struct {
-	StopTime *time.Time `json:"stop_time,omitempty" jsonschema:"description=Optional stop time for the timer"`
+	StopTime *time.Time `json:"stop_time,omitempty" jsonschema:"optional stop time for the timer"`
 }
 
 type StopTimerOutput struct {
-	Message string `json:"message" jsonschema:"The result message"`
+	Message string `json:"message" jsonschema:"the result message"`
 }
 
 type ModifyEntryInput struct {
-	ID        string     `json:"id" jsonschema:"required,description=The ID of the entry to modify"`
-	StartTime *time.Time `json:"start_time,omitempty" jsonschema:"description=New start time for the entry"`
-	EndTime   *time.Time `json:"end_time,omitempty" jsonschema:"description=New end time for the entry"`
+	ID        string     `json:"id" jsonschema:"the ID of the entry to modify"`
+	StartTime *time.Time `json:"start_time,omitempty" jsonschema:"new start time for the entry"`
+	EndTime   *time.Time `json:"end_time,omitempty" jsonschema:"new end time for the entry"`
 }
 
 type ModifyEntryOutput struct {
-	Message string `json:"message" jsonschema:"The result message"`
+	Message string `json:"message" jsonschema:"the result message"`
 }
 
 type RemoveEntryInput struct {
-	ID string `json:"id" jsonschema:"required,description=The ID of the entry to remove"`
+	ID string `json:"id" jsonschema:"the ID of the entry to remove"`
 }
 
 type RemoveEntryOutput struct {
-	Message string `json:"message" jsonschema:"The result message"`
+	Message string `json:"message" jsonschema:"the result message"`
 }
 
 type SummaryInput struct {
-	Period string `json:"period" jsonschema:"required,description=The period for summary: week, day, month"`
+	Period string `json:"period" jsonschema:"the period for summary: week, day, month"`
 }
 
 type SummaryOutput struct {
-	Summary string `json:"summary" jsonschema:"The summary data"`
+	Summary string `json:"summary" jsonschema:"the summary data"`
 }
 
 type ExportInput struct {
-	Period string     `json:"period,omitempty" jsonschema:"description=The period for export: week, day, month"`
-	From   *time.Time `json:"from,omitempty" jsonschema:"description=Start datetime for export range"`
-	To     *time.Time `json:"to,omitempty" jsonschema:"description=End datetime for export range"`
+	Period string     `json:"period,omitempty" jsonschema:"the period for export: week, day, month"`
+	From   *time.Time `json:"from,omitempty" jsonschema:"start datetime for export range"`
+	To     *time.Time `json:"to,omitempty" jsonschema:"end datetime for export range"`
 }
 
 type ExportOutput struct {
-	Export string `json:"export" jsonschema:"The exported data"`
+	Export string `json:"export" jsonschema:"the exported data"`
 }
 
 // Handlers
