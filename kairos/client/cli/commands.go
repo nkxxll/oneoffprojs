@@ -1,53 +1,50 @@
 package main
 
 import (
-	"context"
+	"bytes"
+	"encoding/json"
 	"fmt"
+	"io"
 	"log"
+	"net/http"
+	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
-	"github.com/modelcontextprotocol/go-sdk/mcp"
+	"kairos/client/shared"
+	"kairos/timew"
 )
 
-var url string
+var proxyURL string
 
-func connectToServer() (*mcp.ClientSession, error) {
-	ctx := context.Background()
-	client := mcp.NewClient(&mcp.Implementation{Name: "kairos-client", Version: "1.0.0"}, nil)
-	transport := mcp.StreamableClientTransport{Endpoint: url}
-	session, err := client.Connect(ctx, &transport, nil)
+func callHTTP(endpoint string, args map[string]any) (string, error) {
+	url := fmt.Sprintf("http://%s%s", proxyURL, endpoint)
+	jsonData, err := json.Marshal(args)
 	if err != nil {
-		return nil, fmt.Errorf("failed to connect: %w", err)
+		return "", fmt.Errorf("failed to marshal request: %w", err)
 	}
-	return session, nil
-}
-
-func callTool(session *mcp.ClientSession, name string, args map[string]any) (string, error) {
-	ctx := context.Background()
-	params := &mcp.CallToolParams{
-		Name:      name,
-		Arguments: args,
-	}
-	res, err := session.CallTool(ctx, params)
+	resp, err := http.Post(url, "application/json", bytes.NewBuffer(jsonData))
 	if err != nil {
-		return "", fmt.Errorf("CallTool failed: %w", err)
+		return "", fmt.Errorf("HTTP request failed: %w", err)
 	}
-	if res.IsError {
-		return "", fmt.Errorf("tool failed")
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("failed to read response: %w", err)
 	}
-	var output string
-	for _, c := range res.Content {
-		if text, ok := c.(*mcp.TextContent); ok {
-			output += text.Text + "\n"
-		}
+	var toolResp shared.ToolCallResponse
+	if err := json.Unmarshal(body, &toolResp); err != nil {
+		return "", fmt.Errorf("failed to unmarshal response: %w", err)
 	}
-	return output, nil
+	if !toolResp.Success {
+		return "", fmt.Errorf("tool error: %s", toolResp.Error)
+	}
+	return toolResp.Output, nil
 }
 
 var rootCmd = &cobra.Command{
-	Use:   "kairos",
-	Short: "CLI client for Kairos time tracking MCP server",
+	Use:   "kairos-cli",
+	Short: "CLI client for Kairos time tracking via proxy",
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 		return nil
 	},
@@ -68,12 +65,7 @@ var startCmd = &cobra.Command{
 			}
 			argsMap["start_time"] = startTime
 		}
-		session, err := connectToServer()
-		if err != nil {
-			log.Fatal(err)
-		}
-		defer session.Close()
-		output, err := callTool(session, "start_timer", argsMap)
+		output, err := callHTTP("/start", argsMap)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -94,12 +86,7 @@ var stopCmd = &cobra.Command{
 			}
 			argsMap["stop_time"] = stopTime
 		}
-		session, err := connectToServer()
-		if err != nil {
-			log.Fatal(err)
-		}
-		defer session.Close()
-		output, err := callTool(session, "stop_timer", argsMap)
+		output, err := callHTTP("/stop", argsMap)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -130,12 +117,7 @@ var modifyCmd = &cobra.Command{
 			}
 			argsMap["end_time"] = endTime
 		}
-		session, err := connectToServer()
-		if err != nil {
-			log.Fatal(err)
-		}
-		defer session.Close()
-		output, err := callTool(session, "modify_entry", argsMap)
+		output, err := callHTTP("/modify", argsMap)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -150,12 +132,7 @@ var removeCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		id := args[0]
 		argsMap := map[string]any{"id": id}
-		session, err := connectToServer()
-		if err != nil {
-			log.Fatal(err)
-		}
-		defer session.Close()
-		output, err := callTool(session, "remove_entry", argsMap)
+		output, err := callHTTP("/remove", argsMap)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -170,12 +147,7 @@ var summaryCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		period := args[0]
 		argsMap := map[string]any{"period": period}
-		session, err := connectToServer()
-		if err != nil {
-			log.Fatal(err)
-		}
-		defer session.Close()
-		output, err := callTool(session, "summary", argsMap)
+		output, err := callHTTP("/summary", argsMap)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -208,16 +180,26 @@ var exportCmd = &cobra.Command{
 			}
 			argsMap["to"] = to
 		}
-		session, err := connectToServer()
+		output, err := callHTTP("/export", argsMap)
 		if err != nil {
 			log.Fatal(err)
 		}
-		defer session.Close()
-		output, err := callTool(session, "export", argsMap)
-		if err != nil {
-			log.Fatal(err)
+		var entries []timew.TimeEntry
+		if json.Unmarshal([]byte(output), &entries) == nil {
+			if len(entries) == 0 {
+				fmt.Println("No entries found.")
+				return
+			}
+			fmt.Println("Exported Time Entries:")
+			fmt.Printf("%-5s %-20s %-20s %-20s %s\n", "ID", "Start", "End", "Tags", "Annotation")
+			fmt.Println(strings.Repeat("-", 80))
+			for _, e := range entries {
+				tags := strings.Join(e.Tags, ", ")
+				fmt.Printf("%-5s %-20s %-20s %-20s %s\n", e.ID, e.Start, e.End, tags, e.Annotation)
+			}
+		} else {
+			fmt.Print(output)
 		}
-		fmt.Print(output)
 	},
 }
 
@@ -225,12 +207,7 @@ var inspectCmd = &cobra.Command{
 	Use:   "inspect",
 	Short: "Inspect the currently running time tracker",
 	Run: func(cmd *cobra.Command, args []string) {
-		session, err := connectToServer()
-		if err != nil {
-			log.Fatal(err)
-		}
-		defer session.Close()
-		output, err := callTool(session, "inspect_tracker", map[string]any{})
+		output, err := callHTTP("/inspect", map[string]any{})
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -239,7 +216,7 @@ var inspectCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.PersistentFlags().StringVar(&url, "url", "localhost:3000", "URL to the MCP server")
+	rootCmd.PersistentFlags().StringVar(&proxyURL, "proxy-url", "localhost:8080", "URL to the proxy server")
 	startCmd.Flags().String("start-time", "", "Start time in RFC3339 format")
 	stopCmd.Flags().String("stop-time", "", "Stop time in RFC3339 format")
 	modifyCmd.Flags().String("start-time", "", "New start time in RFC3339 format")
@@ -255,10 +232,4 @@ func init() {
 	rootCmd.AddCommand(summaryCmd)
 	rootCmd.AddCommand(exportCmd)
 	rootCmd.AddCommand(inspectCmd)
-}
-
-func main() {
-	if err := rootCmd.Execute(); err != nil {
-		log.Fatal(err)
-	}
 }
