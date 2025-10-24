@@ -1,21 +1,41 @@
 package main
 
 import (
-	"bytes"
-	"encoding/json"
-	"fmt"
-	"io"
-	"log"
-	"net/http"
+"bytes"
+"encoding/json"
+"fmt"
+"io"
+"log"
+"net/http"
+"os"
+"path/filepath"
 	"strings"
-	"time"
+"time"
 
-	"github.com/spf13/cobra"
+"github.com/spf13/cobra"
 	"kairos/client/shared"
 	"kairos/timew"
 )
 
-var proxyURL string
+var proxyURL = "localhost:8080"
+var flagProxyURL string
+
+func loadConfig() (shared.Config, error) {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return shared.Config{}, err
+	}
+	configPath := filepath.Join(homeDir, ".config", "kairos", "config.json")
+	data, err := os.ReadFile(configPath)
+	if err != nil {
+		return shared.Config{}, err
+	}
+	var config shared.Config
+	if err := json.Unmarshal(data, &config); err != nil {
+		return shared.Config{}, err
+	}
+	return config, nil
+}
 
 func callHTTP(endpoint string, args map[string]any) (string, error) {
 	url := fmt.Sprintf("http://%s%s", proxyURL, endpoint)
@@ -46,6 +66,14 @@ var rootCmd = &cobra.Command{
 	Use:   "kairos-cli",
 	Short: "CLI client for Kairos time tracking via proxy",
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		if flagProxyURL != "" {
+			proxyURL = flagProxyURL
+		} else {
+			config, err := loadConfig()
+			if err == nil && config.ProxyURL != "" {
+				proxyURL = config.ProxyURL
+			}
+		}
 		return nil
 	},
 }
@@ -216,7 +244,7 @@ var inspectCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.PersistentFlags().StringVar(&proxyURL, "proxy-url", "localhost:8080", "URL to the proxy server")
+	rootCmd.PersistentFlags().StringVar(&flagProxyURL, "proxy-url", "", "URL to the proxy server (overrides config)")
 	startCmd.Flags().String("start-time", "", "Start time in RFC3339 format")
 	stopCmd.Flags().String("stop-time", "", "Stop time in RFC3339 format")
 	modifyCmd.Flags().String("start-time", "", "New start time in RFC3339 format")

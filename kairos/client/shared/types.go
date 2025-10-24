@@ -36,3 +36,8 @@ type ExportRequest struct {
 	From   *time.Time `json:"from,omitempty"`
 	To     *time.Time `json:"to,omitempty"`
 }
+
+// Config represents the CLI configuration
+type Config struct {
+	ProxyURL string `json:"proxy_url"`
+}
