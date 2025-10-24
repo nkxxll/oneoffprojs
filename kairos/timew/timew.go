@@ -188,11 +188,12 @@ func Export(period string, from, to *time.Time) (string, error) {
 }
 
 // InspectTracker inspects the currently running tracker
-func InspectTracker() (string, error) {
+func InspectTracker() string {
 	args := []string{}
 	result, err := ExecuteCommand(args)
+	// this command is expected to fail if there is no time tracker running
 	if err != nil {
-		return "", fmt.Errorf("failed to inspect tracker: %s", result.Error)
+		return result.Output
 	}
-	return result.Output, nil
+	return result.Output
 }

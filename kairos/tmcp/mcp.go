@@ -3,10 +3,11 @@ package tmcp
 import (
 	"context"
 	"fmt"
-	"kairos/timew"
 	"log"
 	"net/http"
 	"time"
+
+	"kairos/timew"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
@@ -66,8 +67,7 @@ type ExportOutput struct {
 	Export string `json:"export" jsonschema:"the exported data"`
 }
 
-type InspectTrackerInput struct {
-}
+type InspectTrackerInput struct{}
 
 type InspectTrackerOutput struct {
 	Status string `json:"status" jsonschema:"the current status of the time tracker"`
@@ -124,10 +124,7 @@ func HandleExport(ctx context.Context, req *mcp.CallToolRequest, input ExportInp
 }
 
 func HandleInspectTracker(ctx context.Context, req *mcp.CallToolRequest, input InspectTrackerInput) (*mcp.CallToolResult, InspectTrackerOutput, error) {
-	status, err := timew.InspectTracker()
-	if err != nil {
-		return nil, InspectTrackerOutput{}, err
-	}
+	status := timew.InspectTracker()
 	return nil, InspectTrackerOutput{Status: status}, nil
 }
 
