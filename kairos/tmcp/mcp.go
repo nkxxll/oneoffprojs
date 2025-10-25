@@ -3,20 +3,17 @@ package tmcp
 import (
 	"context"
 	"fmt"
+	"kairos/timew"
 	"log"
 	"net/http"
 	"time"
 
-	"kairos/timew"
-
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
-// Input and output structs for tools
-
 type StartTimerInput struct {
 	Name      string     `json:"name" jsonschema:"the name of the timer to start"`
-	StartTime *time.Time `json:"start_time,omitempty" jsonschema:"optional start time for the timer"`
+	StartTime *time.Time `json:"start_time,omitempty" jsonschema:"Optional: Start time in ISO 8601 format with timezone (e.g., 2025-10-25T16:00:00+01:00 or 2025-10-25T16:00:00Z)"`
 }
 
 type StartTimerOutput struct {
@@ -24,7 +21,7 @@ type StartTimerOutput struct {
 }
 
 type StopTimerInput struct {
-	StopTime *time.Time `json:"stop_time,omitempty" jsonschema:"optional stop time for the timer"`
+	StopTime *time.Time `json:"stop_time,omitempty" jsonschema:"Optional: Stop time in ISO 8601 format with timezone (e.g., 2025-10-25T16:00:00+01:00 or 2025-10-25T16:00:00Z)"`
 }
 
 type StopTimerOutput struct {
@@ -33,8 +30,8 @@ type StopTimerOutput struct {
 
 type ModifyEntryInput struct {
 	ID        string     `json:"id" jsonschema:"the ID of the entry to modify"`
-	StartTime *time.Time `json:"start_time,omitempty" jsonschema:"new start time for the entry"`
-	EndTime   *time.Time `json:"end_time,omitempty" jsonschema:"new end time for the entry"`
+	StartTime *time.Time `json:"start_time,omitempty" jsonschema:"Optional: Start time in ISO 8601 format with timezone (e.g., 2025-10-25T16:00:00+01:00 or 2025-10-25T16:00:00Z)"`
+	EndTime   *time.Time `json:"end_time,omitempty" jsonschema:"Optional: Stop time in ISO 8601 format with timezone (e.g., 2025-10-25T16:00:00+01:00 or 2025-10-25T16:00:00Z)"`
 }
 
 type ModifyEntryOutput struct {
@@ -59,8 +56,8 @@ type SummaryOutput struct {
 
 type ExportInput struct {
 	Period string     `json:"period,omitempty" jsonschema:"the period for export: week, day, month"`
-	From   *time.Time `json:"from,omitempty" jsonschema:"start datetime for export range"`
-	To     *time.Time `json:"to,omitempty" jsonschema:"end datetime for export range"`
+	From   *time.Time `json:"start_time,omitempty" jsonschema:"Optional: From time in ISO 8601 format with timezone (e.g., 2025-10-25T16:00:00+01:00 or 2025-10-25T16:00:00Z)"`
+	To     *time.Time `json:"end_time,omitempty" jsonschema:"Optional: To time in ISO 8601 format with timezone (e.g., 2025-10-25T16:00:00+01:00 or 2025-10-25T16:00:00Z)"`
 }
 
 type ExportOutput struct {
