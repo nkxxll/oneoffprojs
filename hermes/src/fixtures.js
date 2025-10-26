@@ -15,6 +15,12 @@ export async function loadFixture(runName, testIndex) {
   }
 }
 
+/**
+ * Save a fixture to the fixture path
+ * @param {string} runName - name of the run
+ * @param {number} testIndex - index of the test
+ * @param {object} response - response object of the run
+ */
 export async function saveFixture(runName, testIndex, response) {
   await mkdir(FIXTURES_DIR, { recursive: true });
   const filePath = getFixturePath(runName, testIndex);

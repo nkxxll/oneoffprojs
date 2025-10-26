@@ -18,7 +18,7 @@ export async function runTests(config, args) {
     results.push({ name: testRun.name, tests: runResults });
   }
 
-  await displayResults(results, args);
+  await displayResults(results);
 }
 
 async function runTestRun(cmd, args, tests, runName, options) {
@@ -51,7 +51,7 @@ async function runTestRun(cmd, args, tests, runName, options) {
     buffer = lines.pop();
 
     for (const line of lines) {
-      let trim = line.trim();
+      const trim = line.trim();
       if (trim) {
         try {
           const response = JSON.parse(trim);

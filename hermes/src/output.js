@@ -1,11 +1,8 @@
-import { saveFixture } from './fixtures.js';
-import { run, update, view, init } from './tui/index.js';
+import { run, update, view, init } from "./tui/index.js";
 
-export async function displayResults(results, args) {
+export async function displayResults(results) {
   let totalTests = 0;
   let passedTests = 0;
-
-  const newFixtures = [];
 
   const initialItems = [];
 
@@ -14,13 +11,12 @@ export async function displayResults(results, args) {
     for (let testIndex = 0; testIndex < run.tests.length; testIndex++) {
       const test = run.tests[testIndex];
       totalTests++;
-      let status = 'FAIL';
+      let status = "FAIL";
       if (test.response) {
         if (test.fixture) {
-          status = test.matched ? 'PASS (fixture)' : 'FAIL (fixture mismatch)';
+          status = test.matched ? "PASS (fixture)" : "FAIL (fixture mismatch)";
         } else {
-          status = 'PASS (new)';
-          newFixtures.push({ runIndex, testIndex, runName: run.name, response: test.response });
+          status = "PASS (new)";
         }
         if (test.matched || !test.fixture) passedTests++;
       }
@@ -35,24 +31,20 @@ export async function displayResults(results, args) {
           content += `Expected: ${JSON.stringify(test.fixture, null, 2)}\n`;
         }
       } else {
-        content += 'Response: No response received\n';
+        content += "Response: No response received\n";
       }
 
       initialItems.push({
-        id: `${runIndex}-${testIndex}`,
+        runName: run.name,
+        testIndex,
+        test,
         content,
-        foldedContent
+        foldedContent,
       });
     }
   }
 
   const [initialModel] = init(initialItems);
   run(initialModel, update, view);
-
-  // After TUI exits, handle fixtures
-  for (const item of newFixtures) {
-    await saveFixture(item.runName, item.testIndex, item.response);
-  }
-
-  console.log(`\nSummary: ${passedTests}/${totalTests} tests passed`);
+  // everything here will not happen
 }
