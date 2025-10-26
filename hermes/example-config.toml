@@ -1,0 +1,15 @@
+cmd = "cat"
+
+[[test_runs]]
+name = "basic test"
+
+[[test_runs.tests]]
+type = "initialize"
+
+[[test_runs.tests]]
+type = "notifications/initialized"
+
+[[test_runs.tests]]
+type = "list/tools"
+tool = "greeter"
+args = """{"name": "tim"}"""
