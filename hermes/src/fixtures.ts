@@ -4,7 +4,7 @@ import path from 'path';
 
 const FIXTURES_DIR = '.hermes/fixtures';
 
-export async function loadFixture(runName, testIndex) {
+export async function loadFixture(runName: string, testIndex: number): Promise<any> {
   const filePath = getFixturePath(runName, testIndex);
   if (!existsSync(filePath)) return null;
   try {
@@ -21,17 +21,17 @@ export async function loadFixture(runName, testIndex) {
  * @param {number} testIndex - index of the test
  * @param {object} response - response object of the run
  */
-export async function saveFixture(runName, testIndex, response) {
+export async function saveFixture(runName: string, testIndex: number, response: any): Promise<void> {
   await mkdir(FIXTURES_DIR, { recursive: true });
   const filePath = getFixturePath(runName, testIndex);
   await writeFile(filePath, JSON.stringify(response, null, 2));
 }
 
-export function compareFixture(actual, expected) {
+export function compareFixture(actual: any, expected: any): boolean {
   return JSON.stringify(actual) === JSON.stringify(expected);
 }
 
-function getFixturePath(runName, testIndex) {
+function getFixturePath(runName: string, testIndex: number): string {
   const safeName = runName.replace(/[^a-zA-Z0-9]/g, '_');
   return path.join(FIXTURES_DIR, `${safeName}_${testIndex}.json`);
 }

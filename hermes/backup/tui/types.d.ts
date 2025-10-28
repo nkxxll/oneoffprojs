@@ -1,4 +1,4 @@
-import {Item} from "../types.d.ts";
+import {Item} from "../../src/types";
 
 interface BoxChars {
   topLeft: string;

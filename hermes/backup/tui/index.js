@@ -1,6 +1,6 @@
-/** @import {Model, Command, Message, BoxChars} from "./types.d.ts" */
+/** @import {Model, Command, Message, BoxChars} from "./types" */
 
-import { saveFixture } from "../fixtures";
+import { saveFixture } from "../../src/fixtures.js";
 
 /** @type {BoxChars} */
 const BOX_CHARS = {
@@ -252,16 +252,14 @@ export function view(model) {
 /**
  * Runs the TUI application loop, handling user input and rendering.
  * @param {Model} initialModel - The starting model state
- * @param {function(Model, Message): [Model, Command]} updateFn - The update function
- * @param {function(Model): string} viewFn - The view function
  */
-export function run(initialModel, updateFn, viewFn) {
+export function run(initialModel) {
   let model = initialModel;
   let quit = false;
 
   // Handle SIGTERM and SIGINT for graceful exit
   const cleanup = () => {
-    process.stdout.write("\u001b[2J\u001b[0;0H"); // Clear screen
+    process.stduut.write("\u001b[2J\u001b[0;0H"); // Clear screen
     process.stdin.setRawMode(false);
     process.stdin.pause();
     process.exit(0);
@@ -275,7 +273,7 @@ export function run(initialModel, updateFn, viewFn) {
 
   // Initial render
   process.stdout.write("\u001b[2J\u001b[0;0H"); // Clear screen
-  process.stdout.write(viewFn(model));
+  process.stdout.write(model.view(model));
 
   // Handle resize
   process.stdout.on("resize", () => {
@@ -284,10 +282,11 @@ export function run(initialModel, updateFn, viewFn) {
       width: process.stdout.columns,
       height: process.stdout.rows,
     };
-    const [newModel, _command] = updateFn(model, msg);
+    /** @type {[Model, Command]} */
+    const [newModel, _command] = model.update(msg);
     model = newModel;
     process.stdout.write("\u001b[2J\u001b[0;0H");
-    process.stdout.write(viewFn(model));
+    process.stdout.write(newModel.view(newModel));
   });
 
   process.stdin.on("data", (key) => {
@@ -342,7 +341,7 @@ export function run(initialModel, updateFn, viewFn) {
     }
 
     if (msg) {
-      const [newModel, command] = updateFn(model, msg);
+      const [newModel, command] = model.update(model, msg);
       model = newModel;
       if (command) {
         // Handle command if present (not implemented yet)
@@ -350,7 +349,7 @@ export function run(initialModel, updateFn, viewFn) {
 
       if (!quit) {
         process.stdout.write("\u001b[2J\u001b[0;0H"); // Clear screen
-        process.stdout.write(viewFn(model));
+        process.stdout.write(newModel.view(newModel));
       } else {
         process.stdout.write("\u001b[2J\u001b[0;0H"); // Clear screen
         process.stdin.setRawMode(false);

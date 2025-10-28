@@ -1,14 +1,23 @@
-import { displayResults } from "./output.js";
-import { loadFixture, compareFixture } from "./fixtures.js";
+import { loadFixture, compareFixture, saveFixture } from "./fixtures.ts";
+import type {
+  ProcessedConfig,
+  Args,
+  ProcessedTest,
+  TestResult,
+  TestRunResult,
+} from "./types";
 
-export async function runTests(config, args) {
-  const results = [];
+export async function runTests(
+  config: ProcessedConfig,
+  args: Args,
+): Promise<TestRunResult[]> {
+  const results: TestRunResult[] = [];
 
-  for (let runIndex = 0; runIndex < config.testRuns.length; runIndex++) {
-    const testRun = config.testRuns[runIndex];
+  for (const testRun of config.testRuns) {
+    if (!testRun) continue;
     if (args.verbose) console.log(`Running test run: ${testRun.name}`);
 
-    const runResults = await runTestRun(
+    const runResults: TestResult[] = await runTestRun(
       config.cmd,
       config.args,
       testRun.tests,
@@ -18,10 +27,17 @@ export async function runTests(config, args) {
     results.push({ name: testRun.name, tests: runResults });
   }
 
-  await displayResults(results);
+  return results;
 }
 
-async function runTestRun(cmd, args, tests, runName, options) {
+async function runTestRun(
+  cmd: string,
+  args: string[] | undefined,
+  tests: ProcessedTest[],
+  runName: string,
+  options: Args,
+): Promise<TestResult[]> {
+  if (!cmd) throw new Error("Command is required");
   const testArgs = args || [];
   const process = Bun.spawn([cmd, ...testArgs], {
     stdin: "pipe",
@@ -48,7 +64,7 @@ async function runTestRun(cmd, args, tests, runName, options) {
     if (done) break;
     buffer += decoder.decode(value, { stream: true });
     const lines = buffer.split("\n");
-    buffer = lines.pop();
+    buffer = lines.pop() || "";
 
     for (const line of lines) {
       const trim = line.trim();
@@ -72,12 +88,24 @@ async function runTestRun(cmd, args, tests, runName, options) {
   // Process results
   const runResults = [];
   for (let i = 0; i < tests.length; i++) {
+    const test = tests[i];
+    if (!test) continue;
     const fixture = await loadFixture(runName, i);
     const response = responses[i] || null;
     const matched =
       fixture && response ? compareFixture(response, fixture) : false;
+
+    // Save fixture if we have a response but no fixture
+    if (response && !fixture) {
+      await saveFixture(runName, i, response);
+    }
+
     runResults.push({
-      ...tests[i],
+      type: test.type,
+      params: test.params,
+      tool: test.tool,
+      args: test.args,
+      message: test.message,
       response,
       fixture,
       matched,
