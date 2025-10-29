@@ -64,7 +64,8 @@ export async function composeAndExecuteSshCommand(
       const output = await new Response(proc.stdout).text();
       const error = await new Response(proc.stderr).text();
       const success = proc.exitCode === 0;
-      return { success, output: success ? output : error };
+      const combinedOutput = `${output.trim()}${error.trim() ? '\n' + error.trim() : ''}`.trim();
+      return { success, output: combinedOutput };
     } catch (err: unknown) {
       return { success: false, output: `Error: ${(err as Error).message}` };
     }

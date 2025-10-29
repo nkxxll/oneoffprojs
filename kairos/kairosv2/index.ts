@@ -140,14 +140,15 @@ server.registerTool(
     let message;
     if (isDryRun) {
       message = `Dry run command: ${result.output}`;
-    } else if (result.success) {
-      message = `Command executed successfully: ${result.output}`;
     } else {
-      message = `Command failed: ${result.output}`;
+      message = `Command executed: ${result.output}`;
     }
     return {
       content: [{ type: "text", text: message }],
-      structuredContent: { success: result.success, output: result.output },
+      structuredContent: {
+        success: result.success || !!result.output.trim(),
+        output: result.output,
+      },
     };
   },
 );
