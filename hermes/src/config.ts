@@ -15,7 +15,6 @@ export async function loadConfig(configPath: string): Promise<Config> {
 }
 
 function validateConfig(config: any): void {
-  console.log(config);
   if (!config.cmd) {
     throw new Error("Config must have cmd and args");
   }

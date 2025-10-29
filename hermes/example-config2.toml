@@ -1,5 +1,6 @@
 cmd = "bun"
-args = "run /Users/niklas/git/oneoffprojs/kairos/kairosv2/index.ts --dry"
+# args = "run /Users/niklas/git/oneoffprojs/kairos/kairosv2/index.ts --dry"
+args = "run /home/nkxxll/git/oneoffprojs/kairos/kairosv2/index.ts --dry"
 
 [[test_runs]]
 name = "initialize start"

@@ -1,93 +1,75 @@
-import { useState, useEffect } from "react";
+import { useRef, useState } from "react";
 import type { TestRunResult } from "./types";
-import { render } from "@opentui/react";
+import { render, useKeyboard } from "@opentui/react";
 import { saveFixture } from "./fixtures";
-import { emitKeypressEvents } from "readline";
+import { getConstantValue } from "typescript";
 
 interface TestResultsDisplayProps {
   results: TestRunResult[];
 }
 
 export function TestResultsDisplay({ results }: TestResultsDisplayProps) {
+  const scroll = useRef(undefined);
   const initialRunStates = results.length > 0 ? { 0: true } : {};
   const [runStates, setRunStates] =
     useState<Record<number, boolean>>(initialRunStates);
   const [testStates, setTestStates] = useState<Record<string, boolean>>({});
   const [selected, setSelected] = useState({ runIndex: 0, testIndex: 0 });
-  useEffect(() => {
-    const onKey = async (keyName: string) => {
-      if (keyName === "j") {
-        // move down
-        let { runIndex, testIndex } = selected;
-        const currentRun = results[runIndex];
-        if (testIndex < currentRun.tests.length - 1) {
-          testIndex++;
-        } else if (runIndex < results.length - 1) {
-          runIndex++;
-          testIndex = 0;
-        }
-        setSelected({ runIndex, testIndex });
-        setRunStates((prev) => ({ ...prev, [runIndex]: true }));
-      } else if (keyName === "k") {
-        // move up
-        let { runIndex, testIndex } = selected;
-        if (testIndex > 0) {
-          testIndex--;
-        } else if (runIndex > 0) {
-          runIndex--;
-          testIndex = results[runIndex].tests.length - 1;
-        }
-        setSelected({ runIndex, testIndex });
-        setRunStates((prev) => ({ ...prev, [runIndex]: true }));
-      } else if (keyName === "J") {
-        // jump to next run
-        let { runIndex } = selected;
-        if (runIndex < results.length - 1) {
-          runIndex++;
-        }
-        setSelected({ runIndex, testIndex: 0 });
-        setRunStates((prev) => ({ ...prev, [runIndex]: true }));
-      } else if (keyName === "K") {
-        // jump to previous run
-        let { runIndex } = selected;
-        if (runIndex > 0) {
-          runIndex--;
-        }
-        setSelected({ runIndex, testIndex: 0 });
-        setRunStates((prev) => ({ ...prev, [runIndex]: true }));
-      } else if (keyName === "l") {
-        const keyStr = `${selected.runIndex}-${selected.testIndex}`;
-        setTestStates((prev) => ({ ...prev, [keyStr]: !prev[keyStr] }));
-      } else if (keyName === "s") {
-        const currentRun = results[selected.runIndex];
-        const currentTest = currentRun.tests[selected.testIndex];
-        await saveFixture(
-          currentRun.name,
-          selected.testIndex,
-          currentTest.response,
-        );
-      } else if (keyName === "u") {
-        const halfPage = Math.floor(process.stdout.rows / 2);
-        process.stdout.write(`\x1b[${halfPage}S`);
-      } else if (keyName === "d") {
-        const halfPage = Math.floor(process.stdout.rows / 2);
-        process.stdout.write(`\x1b[${halfPage}T`);
-      } else if (keyName === "q") {
-        process.exit(0);
+  useKeyboard(async (key) => {
+    if (key.name === "j" && key.shift) {
+      // jump to next run
+      let { runIndex } = selected;
+      if (runIndex < results.length - 1) {
+        runIndex++;
       }
-    };
-
-    emitKeypressEvents(process.stdin);
-    process.stdin.on("keypress", (str, key) => {
-      onKey(key.name);
-    });
-    process.stdin.setRawMode(true);
-
-    return () => {
-      process.stdin.setRawMode(false);
-      process.stdin.removeAllListeners("keypress");
-    };
-  }, [selected, results]);
+      setSelected({ runIndex, testIndex: 0 });
+      setRunStates((prev) => ({ ...prev, [runIndex]: true }));
+    } else if (key.name === "k" && key.shift) {
+      // jump to previous run
+      let { runIndex } = selected;
+      if (runIndex > 0) {
+        runIndex--;
+      }
+      setSelected({ runIndex, testIndex: 0 });
+      setRunStates((prev) => ({ ...prev, [runIndex]: true }));
+    } else if (key.name === "j") {
+      // move down
+      let { runIndex, testIndex } = selected;
+      const currentRun = results[runIndex];
+      if (testIndex < currentRun.tests.length - 1) {
+        testIndex++;
+      } else if (runIndex < results.length - 1) {
+        runIndex++;
+        testIndex = 0;
+      }
+      setSelected({ runIndex, testIndex });
+      setRunStates((prev) => ({ ...prev, [runIndex]: true }));
+    } else if (key.name === "k") {
+      // move up
+      let { runIndex, testIndex } = selected;
+      if (testIndex > 0) {
+        testIndex--;
+      } else if (runIndex > 0) {
+        runIndex--;
+        testIndex = results[runIndex].tests.length - 1;
+      }
+      setSelected({ runIndex, testIndex });
+      setRunStates((prev) => ({ ...prev, [runIndex]: true }));
+    } else if (key.name === "l") {
+      const keyStr = `${selected.runIndex}-${selected.testIndex}`;
+      setTestStates((prev) => ({ ...prev, [keyStr]: !prev[keyStr] }));
+    } else if (key.name === "s") {
+      const currentRun = results[selected.runIndex];
+      const currentTest = currentRun.tests[selected.testIndex];
+      await saveFixture(
+        currentRun.name,
+        selected.testIndex,
+        currentTest.response,
+      );
+    } else if (key.name === "q") {
+      process.exit(0);
+    }
+  });
 
   let totalTests = 0;
   let passedTests = 0;
