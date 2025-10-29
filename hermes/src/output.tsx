@@ -1,22 +1,51 @@
-import { useRef, useState } from "react";
+import { useState } from "react";
 import type { TestRunResult } from "./types";
 import { render, useKeyboard } from "@opentui/react";
 import { saveFixture } from "./fixtures";
-import { getConstantValue } from "typescript";
 
 interface TestResultsDisplayProps {
   results: TestRunResult[];
 }
 
+interface SummaryProps {
+  totalTests: number;
+  passedTests: number;
+}
+
+function Summary({ totalTests, passedTests }: SummaryProps) {
+  return (
+    <box
+      border
+      title="Summary"
+      padding={1}
+      backgroundColor="black"
+      style={{
+        position: "absolute",
+        zIndex: 20,
+      }}
+    >
+      <text>
+        <b>Summary</b>
+      </text>
+      <text>Total tests: {totalTests}</text>
+      <text>Passed: {passedTests}</text>
+      <text>Failed: {totalTests - passedTests}</text>
+    </box>
+  );
+}
+
 export function TestResultsDisplay({ results }: TestResultsDisplayProps) {
-  const scroll = useRef(undefined);
   const initialRunStates = results.length > 0 ? { 0: true } : {};
   const [runStates, setRunStates] =
     useState<Record<number, boolean>>(initialRunStates);
   const [testStates, setTestStates] = useState<Record<string, boolean>>({});
   const [selected, setSelected] = useState({ runIndex: 0, testIndex: 0 });
+  const [showSummary, setShowSummary] = useState(true);
   useKeyboard(async (key) => {
-    if (key.name === "j" && key.shift) {
+    if (key.name === "s" && key.shift) {
+      console.log("we are in S");
+      setShowSummary((s) => !s);
+    } else if (key.name === "j" && key.shift) {
       // jump to next run
       let { runIndex } = selected;
       if (runIndex < results.length - 1) {
@@ -93,112 +122,109 @@ export function TestResultsDisplay({ results }: TestResultsDisplayProps) {
   }
 
   return (
-    <scrollbox>
-      {results.map((run, runIndex) => {
-        const isRunOpen = runStates[runIndex] ?? false;
-        return (
-          <box
-            border
-            key={runIndex}
-            title={`Test Run: ${run.name} - ${isRunOpen ? "Expanded" : "Collapsed"}`}
-          >
-            <text
-              onMouseDown={() =>
-                setRunStates((prev) => ({
-                  ...prev,
-                  [runIndex]: !prev[runIndex],
-                }))
-              }
+    <>
+      {showSummary && (
+        <Summary totalTests={totalTests} passedTests={passedTests} />
+      )}
+      <scrollbox>
+        {results.map((run, runIndex) => {
+          const isRunOpen = runStates[runIndex] ?? false;
+          return (
+            <box
+              border
+              key={runIndex}
+              title={`Test Run: ${run.name} - ${isRunOpen ? "Expanded" : "Collapsed"}`}
             >
-              {isRunOpen ? "v" : ">"} Test Run: {run.name}
-            </text>
-            {isRunOpen && (
-              <box border padding={1}>
-                {run.tests.map((test, testIndex) => {
-                  if (!test) return null;
-                  let status = "FAIL";
-                  if (test.type === "notifications/initialized") {
-                    if (!test.response) {
-                      status = "PASS (notification)";
-                    }
-                  } else if (test.response) {
-                    if (test.fixture) {
-                      status = test.matched
-                        ? "PASS (fixture)"
-                        : "FAIL (fixture mismatch)";
-                    } else {
-                      status = "PASS (new)";
-                    }
-                  }
-                  const summary = `${status}: ${test.type}`;
-                  const key = `${runIndex}-${testIndex}`;
-                  const isTestOpen = testStates[key] ?? false;
-                  const isSelected =
-                    runIndex === selected.runIndex &&
-                    testIndex === selected.testIndex;
-                  return (
-                    <box
-                      key={testIndex}
-                      onMouseDown={() =>
-                        setTestStates((prev) => ({
-                          ...prev,
-                          [key]: !prev[key],
-                        }))
+              <text
+                onMouseDown={() =>
+                  setRunStates((prev) => ({
+                    ...prev,
+                    [runIndex]: !prev[runIndex],
+                  }))
+                }
+              >
+                {isRunOpen ? "v" : ">"} Test Run: {run.name}
+              </text>
+              {isRunOpen && (
+                <box border padding={1}>
+                  {run.tests.map((test, testIndex) => {
+                    if (!test) return null;
+                    let status = "FAIL";
+                    if (test.type === "notifications/initialized") {
+                      if (!test.response) {
+                        status = "PASS (notification)";
                       }
-                    >
-                      <text>
-                        {isSelected ? ">" : " "} {summary} -{" "}
-                        {isTestOpen ? "Expanded" : "Collapsed"}
-                      </text>
-                      {isTestOpen && (
-                        <box border padding={1}>
-                          <text>
-                            <b>Request:</b>
-                          </text>
-                          <text>{JSON.stringify(test.message, null, 2)}</text>
-                          <text>
-                            <b>Response</b>:
-                          </text>
-                          {test.response ? (
+                    } else if (test.response) {
+                      if (test.fixture) {
+                        status = test.matched
+                          ? "PASS (fixture)"
+                          : "FAIL (fixture mismatch)";
+                      } else {
+                        status = "PASS (new)";
+                      }
+                    }
+                    const summary = `${status}: ${test.type}`;
+                    const key = `${runIndex}-${testIndex}`;
+                    const isTestOpen = testStates[key] ?? false;
+                    const isSelected =
+                      runIndex === selected.runIndex &&
+                      testIndex === selected.testIndex;
+                    return (
+                      <box
+                        key={testIndex}
+                        onMouseDown={() =>
+                          setTestStates((prev) => ({
+                            ...prev,
+                            [key]: !prev[key],
+                          }))
+                        }
+                      >
+                        <text>
+                          {isSelected ? ">" : " "} {summary} -{" "}
+                          {isTestOpen ? "Expanded" : "Collapsed"}
+                        </text>
+                        {isTestOpen && (
+                          <box border padding={1}>
                             <text>
-                              {JSON.stringify(test.response, null, 2)}
+                              <b>Request:</b>
                             </text>
-                          ) : (
+                            <text>{JSON.stringify(test.message, null, 2)}</text>
                             <text>
-                              {test.type === "notifications/initialized"
-                                ? "No response (expected for notification)"
-                                : "No response received"}
+                              <b>Response</b>:
                             </text>
-                          )}
-                          {test.fixture && !test.matched && (
-                            <>
+                            {test.response ? (
                               <text>
-                                <b>Expected</b>:
+                                {JSON.stringify(test.response, null, 2)}
                               </text>
+                            ) : (
                               <text>
-                                {JSON.stringify(test.fixture, null, 2)}
+                                {test.type === "notifications/initialized"
+                                  ? "No response (expected for notification)"
+                                  : "No response received"}
                               </text>
-                            </>
-                          )}
-                        </box>
-                      )}
-                    </box>
-                  );
-                })}
-              </box>
-            )}
-          </box>
-        );
-      })}
-      <box padding={1}>
-        <text>
-          <b>Summary</b>
-        </text>
-        <text>Total tests: {totalTests}</text>
-        <text>Passed: {passedTests}</text>
-        <text>Failed: {totalTests - passedTests}</text>
-      </box>
-    </scrollbox>
+                            )}
+                            {test.fixture && !test.matched && (
+                              <>
+                                <text>
+                                  <b>Expected</b>:
+                                </text>
+                                <text>
+                                  {JSON.stringify(test.fixture, null, 2)}
+                                </text>
+                              </>
+                            )}
+                          </box>
+                        )}
+                      </box>
+                    );
+                  })}
+                </box>
+              )}
+            </box>
+          );
+        })}
+      </scrollbox>
+    </>
   );
 }
 
