@@ -1,0 +1,41 @@
+cmd = "bun"
+args = "run /Users/niklas/git/oneoffprojs/kairos/kairosv2/index.ts --dry"
+
+[[test_runs]]
+name = "initialize start"
+
+[[test_runs.tests]]
+type = "initialize"
+
+[[test_runs.tests]]
+type = "notifications/initialized"
+
+[[test_runs.tests]]
+type = "list/tools"
+
+[[test_runs.tests]]
+type = "tools/call"
+tool = "timew_start"
+args = """{ "tag": "PROGRAMMING" }"""
+
+[[test_runs]]
+name = "initialize stop modify track"
+
+[[test_runs.tests]]
+type = "initialize"
+
+[[test_runs.tests]]
+type = "notifications/initialized"
+
+[[test_runs.tests]]
+type = "list/tools"
+
+[[test_runs.tests]]
+type = "tools/call"
+tool = "timew_stop"
+args = "{}"
+
+[[test_runs.tests]]
+type = "tools/call"
+tool = "timew_track"
+args = """{ "startISO": "2025-10-29T12:00Z", "endISO": "2025-10-29T13:00Z", "tag": "PROGRMMING" }"""

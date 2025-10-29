@@ -56,7 +56,6 @@ export async function composeAndExecuteSshCommand(
 
   if (isDryRun) {
     const cmdStr = sshArgs.join(" ");
-    console.log(`Dry run: ${cmdStr}`);
     return { success: true, output: cmdStr };
   } else {
     try {

@@ -32,19 +32,19 @@ export async function runTests(
 
 async function runTestRun(
   cmd: string,
-  args: string[] | undefined,
+  args: string | undefined,
   tests: ProcessedTest[],
   runName: string,
   options: Args,
 ): Promise<TestResult[]> {
   if (!cmd) throw new Error("Command is required");
-  const testArgs = args || [];
+  const testArgs = args?.split(" ") || [];
   const process = Bun.spawn([cmd, ...testArgs], {
     stdin: "pipe",
     stdout: "pipe",
     stderr: "inherit",
   });
-  const responses = [];
+  const responsesMap = new Map<number, any>();
 
   // Send messages
   for (const test of tests) {
@@ -71,7 +71,9 @@ async function runTestRun(
       if (trim) {
         try {
           const response = JSON.parse(trim);
-          responses.push(response);
+          if (response.id !== undefined) {
+            responsesMap.set(response.id, response);
+          }
         } catch (e) {
           console.error(`Failed to parse response: ${line}`);
         }
@@ -91,7 +93,7 @@ async function runTestRun(
     const test = tests[i];
     if (!test) continue;
     const fixture = await loadFixture(runName, i);
-    const response = responses[i] || null;
+    const response = test.message.id !== undefined ? responsesMap.get(test.message.id) || null : null;
     const matched =
       fixture && response ? compareFixture(response, fixture) : false;
 

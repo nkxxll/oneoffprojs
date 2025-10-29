@@ -15,6 +15,7 @@ export async function loadConfig(configPath: string): Promise<Config> {
 }
 
 function validateConfig(config: any): void {
+  console.log(config);
   if (!config.cmd) {
     throw new Error("Config must have cmd and args");
   }
@@ -58,15 +59,37 @@ function generateMessage(test: RawTest, id: number): Message {
   const base = { jsonrpc: "2.0" };
   switch (test.type) {
     case "initialize":
-      return { ...base, id, method: "initialize", params: test.params || {} };
+      return {
+        ...base,
+        id,
+        method: "initialize",
+        params: {
+          protocolVersion: "2025-06-18",
+          capabilities: {
+            elicitation: {},
+          },
+          clientInfo: {
+            name: "example-client",
+            version: "1.0.0",
+          },
+        },
+      };
     case "notifications/initialized":
       return { ...base, method: "notifications/initialized" };
     case "list/tools":
       return { ...base, id, method: "tools/list" };
     case "tools/call":
+      let args;
+      try {
+        args = JSON.parse(test.args || "{}");
+      } catch (e) {
+        console.error(
+          `couldn't parse arugments to tool call ${test.tool}, arguments ${test.args}`,
+        );
+      }
       const params = test.params || {
         name: test.tool,
-        arguments: test.args || [],
+        arguments: args,
       };
       return { ...base, id, method: "tools/call", params };
     default:

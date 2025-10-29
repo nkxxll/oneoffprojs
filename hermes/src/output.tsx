@@ -1,14 +1,93 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { TestRunResult } from "./types";
 import { render } from "@opentui/react";
+import { saveFixture } from "./fixtures";
+import { emitKeypressEvents } from "readline";
 
 interface TestResultsDisplayProps {
   results: TestRunResult[];
 }
 
 export function TestResultsDisplay({ results }: TestResultsDisplayProps) {
-  const [runStates, setRunStates] = useState<Record<number, boolean>>({});
+  const initialRunStates = results.length > 0 ? { 0: true } : {};
+  const [runStates, setRunStates] =
+    useState<Record<number, boolean>>(initialRunStates);
   const [testStates, setTestStates] = useState<Record<string, boolean>>({});
+  const [selected, setSelected] = useState({ runIndex: 0, testIndex: 0 });
+  useEffect(() => {
+    const onKey = async (keyName: string) => {
+      if (keyName === "j") {
+        // move down
+        let { runIndex, testIndex } = selected;
+        const currentRun = results[runIndex];
+        if (testIndex < currentRun.tests.length - 1) {
+          testIndex++;
+        } else if (runIndex < results.length - 1) {
+          runIndex++;
+          testIndex = 0;
+        }
+        setSelected({ runIndex, testIndex });
+        setRunStates((prev) => ({ ...prev, [runIndex]: true }));
+      } else if (keyName === "k") {
+        // move up
+        let { runIndex, testIndex } = selected;
+        if (testIndex > 0) {
+          testIndex--;
+        } else if (runIndex > 0) {
+          runIndex--;
+          testIndex = results[runIndex].tests.length - 1;
+        }
+        setSelected({ runIndex, testIndex });
+        setRunStates((prev) => ({ ...prev, [runIndex]: true }));
+      } else if (keyName === "J") {
+        // jump to next run
+        let { runIndex } = selected;
+        if (runIndex < results.length - 1) {
+          runIndex++;
+        }
+        setSelected({ runIndex, testIndex: 0 });
+        setRunStates((prev) => ({ ...prev, [runIndex]: true }));
+      } else if (keyName === "K") {
+        // jump to previous run
+        let { runIndex } = selected;
+        if (runIndex > 0) {
+          runIndex--;
+        }
+        setSelected({ runIndex, testIndex: 0 });
+        setRunStates((prev) => ({ ...prev, [runIndex]: true }));
+      } else if (keyName === "l") {
+        const keyStr = `${selected.runIndex}-${selected.testIndex}`;
+        setTestStates((prev) => ({ ...prev, [keyStr]: !prev[keyStr] }));
+      } else if (keyName === "s") {
+        const currentRun = results[selected.runIndex];
+        const currentTest = currentRun.tests[selected.testIndex];
+        await saveFixture(
+          currentRun.name,
+          selected.testIndex,
+          currentTest.response,
+        );
+      } else if (keyName === "u") {
+        const halfPage = Math.floor(process.stdout.rows / 2);
+        process.stdout.write(`\x1b[${halfPage}S`);
+      } else if (keyName === "d") {
+        const halfPage = Math.floor(process.stdout.rows / 2);
+        process.stdout.write(`\x1b[${halfPage}T`);
+      } else if (keyName === "q") {
+        process.exit(0);
+      }
+    };
+
+    emitKeypressEvents(process.stdin);
+    process.stdin.on("keypress", (str, key) => {
+      onKey(key.name);
+    });
+    process.stdin.setRawMode(true);
+
+    return () => {
+      process.stdin.setRawMode(false);
+      process.stdin.removeAllListeners("keypress");
+    };
+  }, [selected, results]);
 
   let totalTests = 0;
   let passedTests = 0;
@@ -19,7 +98,9 @@ export function TestResultsDisplay({ results }: TestResultsDisplayProps) {
     for (const test of run.tests) {
       if (!test) continue;
       totalTests++;
-      if (test.response) {
+      if (test.type === "notifications/initialized") {
+        if (!test.response) passedTests++;
+      } else if (test.response) {
         if (test.fixture) {
           if (test.matched) passedTests++;
         } else {
@@ -54,7 +135,11 @@ export function TestResultsDisplay({ results }: TestResultsDisplayProps) {
                 {run.tests.map((test, testIndex) => {
                   if (!test) return null;
                   let status = "FAIL";
-                  if (test.response) {
+                  if (test.type === "notifications/initialized") {
+                    if (!test.response) {
+                      status = "PASS (notification)";
+                    }
+                  } else if (test.response) {
                     if (test.fixture) {
                       status = test.matched
                         ? "PASS (fixture)"
@@ -66,6 +151,9 @@ export function TestResultsDisplay({ results }: TestResultsDisplayProps) {
                   const summary = `${status}: ${test.type}`;
                   const key = `${runIndex}-${testIndex}`;
                   const isTestOpen = testStates[key] ?? false;
+                  const isSelected =
+                    runIndex === selected.runIndex &&
+                    testIndex === selected.testIndex;
                   return (
                     <box
                       key={testIndex}
@@ -77,7 +165,8 @@ export function TestResultsDisplay({ results }: TestResultsDisplayProps) {
                       }
                     >
                       <text>
-                        {summary} - {isTestOpen ? "Expanded" : "Collapsed"}
+                        {isSelected ? ">" : " "} {summary} -{" "}
+                        {isTestOpen ? "Expanded" : "Collapsed"}
                       </text>
                       {isTestOpen && (
                         <box border padding={1}>
@@ -93,7 +182,11 @@ export function TestResultsDisplay({ results }: TestResultsDisplayProps) {
                               {JSON.stringify(test.response, null, 2)}
                             </text>
                           ) : (
-                            <text>No response received</text>
+                            <text>
+                              {test.type === "notifications/initialized"
+                                ? "No response (expected for notification)"
+                                : "No response received"}
+                            </text>
                           )}
                           {test.fixture && !test.matched && (
                             <>

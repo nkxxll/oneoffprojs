@@ -1,6 +1,6 @@
 interface Config {
     cmd: string;
-    args?: string[];
+    args?: string;
     test_runs: RawTestRun[];
 }
 
@@ -18,7 +18,7 @@ interface RawTest {
 
 export interface ProcessedConfig {
     cmd: string;
-    args: string[] | undefined;
+    args: string | undefined;
     testRuns: ProcessedTestRun[];
 }
 

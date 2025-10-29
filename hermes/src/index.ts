@@ -69,7 +69,6 @@ Examples:
       verbose: values.verbose || false,
       quiet: values.quiet || false,
     });
-    // console.log(JSON.stringify(results));
     displayResults(results);
   } catch (error) {
     console.error(`Error: ${(error as Error).message}`);
