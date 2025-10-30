@@ -1,4 +1,4 @@
-type LineKind =
+export type LineKind =
   | "diff_header"
   | "index_header"
   | "file_header_old"
@@ -8,20 +8,20 @@ type LineKind =
   | "added"
   | "removed";
 
-interface DiffHunk {
+export interface DiffHunk {
   header: string;
   startLine: number;
   lines: DiffLine[];
 }
 
-interface DiffFile {
+export interface DiffFile {
   from: string;
   to: string;
   headerStart: number;
   hunks: DiffHunk[];
 }
 
-interface DiffLine {
+export interface DiffLine {
   kind: LineKind;
   content: string;
   lineNumber: number;
@@ -29,12 +29,14 @@ interface DiffLine {
   hunk?: number;
 }
 
-interface DiffMap {
+export interface DiffMap {
   files: DiffFile[];
   all: DiffLine[];
   fileIndex: Map<number, DiffFile>; // line → file
   hunkIndex: Map<number, DiffHunk>; // line → hunk
 }
+
+export type FileStatus = 'added' | 'deleted' | 'modified' | 'renamed';
 
 export function parse(diff: string): DiffMap {
   const diffSplit = diff.split("\n");
@@ -81,4 +83,26 @@ export function parse(diff: string): DiffMap {
   }
 
   return { files, all, fileIndex, hunkIndex };
+}
+
+function getFileName(path: string): string {
+  if (path === '/dev/null') return path;
+  if (path.startsWith('a/')) return path.slice(2);
+  if (path.startsWith('b/')) return path.slice(2);
+  return path;
+}
+
+export function getFileStatus(file: DiffFile): FileStatus {
+  const { from, to } = file;
+  if (from === '/dev/null' && to !== '/dev/null') return 'added';
+  if (from !== '/dev/null' && to === '/dev/null') return 'deleted';
+  if (getFileName(from) === getFileName(to)) return 'modified';
+  return 'renamed';
+}
+
+export function getAllFileStatuses(diffMap: DiffMap): Array<{file: DiffFile, status: FileStatus}> {
+  return diffMap.files.map(file => ({
+    file,
+    status: getFileStatus(file)
+  }));
 }

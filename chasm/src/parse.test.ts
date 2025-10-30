@@ -1,5 +1,5 @@
 import { test, expect } from "bun:test";
-import { parse } from "./parse.ts";
+import { parse, getAllFileStatuses } from "./parse.ts";
 
 test("parses a simple diff with added and removed lines", () => {
   const diff = `diff --git a/file.txt b/file.txt
@@ -129,4 +129,38 @@ index 83db48f..bf3c6e4 100644
   expect(hunk2.lines.some(line => line.kind === "added" && line.content === "+  // Log and exit")).toBe(true);
 
   expect(result.all.length).toBeGreaterThan(20);
+});
+
+test("computes file statuses correctly", () => {
+  const diff = `diff --git a/added.txt b/added.txt
+--- /dev/null
++++ b/added.txt
+@@ -0,0 +1 @@
++new file
+diff --git a/deleted.txt b/deleted.txt
+--- a/deleted.txt
++++ /dev/null
+@@ -1 +0,0 @@
+-old file
+diff --git a/modified.txt b/modified.txt
+--- a/modified.txt
++++ b/modified.txt
+@@ -1 +1 @@
+-old
++new
+diff --git a/old.txt b/new.txt
+--- a/old.txt
++++ b/new.txt
+@@ -1 +1 @@
+-same
++same`;
+
+  const diffMap = parse(diff);
+  const statuses = getAllFileStatuses(diffMap);
+
+  expect(statuses).toHaveLength(4);
+  expect(statuses.find(s => s.file.to === 'b/added.txt')?.status).toBe('added');
+  expect(statuses.find(s => s.file.to === '/dev/null')?.status).toBe('deleted');
+  expect(statuses.find(s => s.file.to === 'b/modified.txt' && s.file.from === 'a/modified.txt')?.status).toBe('modified');
+  expect(statuses.find(s => s.file.to === 'b/new.txt')?.status).toBe('renamed');
 });
