@@ -48,7 +48,7 @@ export function parse(diff: string): DiffMap {
   let currentHunk: DiffHunk | null = null;
 
   for (let i = 0; i < diffSplit.length; i++) {
-    const line = diffSplit[i];
+    const line = diffSplit[i]!;
     let kind: LineKind;
 
     if (line.startsWith("diff --git")) {
