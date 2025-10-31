@@ -19,6 +19,10 @@ export interface DiffFile {
   to: string;
   headerStart: number;
   hunks: DiffHunk[];
+  isNew: boolean;
+  isDeleted: boolean;
+  hasModeChange: boolean;
+  modeChange?: string;
 }
 
 export interface DiffLine {
@@ -54,9 +58,27 @@ export function parse(diff: string): DiffMap {
     let kind: LineKind;
 
     if (line.startsWith("diff --git")) {
-      currentFile = { from: "", to: "", headerStart: i, hunks: [] };
+      currentFile = {
+        from: "",
+        to: "",
+        headerStart: i,
+        hunks: [],
+        isNew: false,
+        isDeleted: false,
+        hasModeChange: false
+      };
       files.push(currentFile);
       kind = "diff_header";
+    } else if (line.startsWith("new file mode")) {
+      currentFile!.isNew = true;
+      kind = "index_header";
+    } else if (line.startsWith("deleted file mode")) {
+      currentFile!.isDeleted = true;
+      kind = "index_header";
+    } else if (line.startsWith("old mode")) {
+      currentFile!.hasModeChange = true;
+      currentFile!.modeChange = line;
+      kind = "index_header";
     } else if (line.startsWith("index ")) {
       kind = "index_header";
     } else if (line.startsWith("--- ")) {
