@@ -26,6 +26,7 @@ function App() {
   }, []);
 
   useKeyboard(async (key) => {
+    setFeedback(key.name);
     if (key.name === "r") {
       const d = await updateData();
       setData(d);
@@ -33,12 +34,15 @@ function App() {
       return;
     }
 
+    if (key.name === "escape") {
+      setShowCommand(false);
+    }
+    setFeedback(key.name);
     if (key.name === "p" && key.ctrl) {
-      const newShow = !showCommand;
-      setShowCommand(newShow);
-      if (newShow) {
+      setShowCommand((show: boolean) => {
         setFeedback("");
-      }
+        return true;
+      });
       return;
     }
 
