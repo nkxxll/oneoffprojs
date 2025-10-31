@@ -16,12 +16,14 @@ export interface CommandPaletteProps {
   show: boolean;
   setFeedback: (feedback: string) => void;
   onUpdate: () => Promise<void>;
+  cwd: string;
 }
 
 export function CommandPalette({
   show,
   setFeedback,
   onUpdate,
+  cwd,
 }: CommandPaletteProps) {
   const [input, setInput] = useState("");
   const [message, setMessage] = useState("");
@@ -74,8 +76,8 @@ export function CommandPalette({
         const shellCommand = SHELL_COMMANDS.find((c) => c.title === "git:add");
         if (!shellCommand) return;
         try {
-          const userInput = Array.from(selectedFiles).join(" ");
-          await runCommand(shellCommand, userInput);
+          const userInput = Array.from(selectedFiles);
+          await runCommand(shellCommand, userInput, cwd);
           setFeedback("git:add executed");
           await onUpdate();
           setShowFileSelector(false);
@@ -153,7 +155,7 @@ export function CommandPalette({
         userInput =
           input.replace(new RegExp(`^${cmdName}\\s*`), "").trim() || undefined;
       }
-      await runCommand(shellCommand, userInput);
+      await runCommand(shellCommand, userInput, cwd);
       setFeedback(`${cmd.title} executed`);
       await onUpdate();
       setInput("");
@@ -221,7 +223,7 @@ export function CommandPalette({
               );
               if (!shellCommand) return;
               try {
-                await runCommand(shellCommand, message);
+                await runCommand(shellCommand, message, cwd);
                 setFeedback(`${pendingCommand.title} executed`);
                 await onUpdate();
                 setMessage("");

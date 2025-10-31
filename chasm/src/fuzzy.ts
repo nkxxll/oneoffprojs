@@ -1,19 +1,21 @@
+import type { ScoredCommand } from "./CommandPalette";
 import type { Command } from "./subcommand";
 
-export function fuzzySearch(query: string, commands: Command[]): Command[] {
-  const results: { command: Command; score: number }[] = [];
+export function fuzzySearch(
+  query: string,
+  commands: Command[],
+): ScoredCommand[] {
+  const results: ScoredCommand[] = [];
 
   for (const command of commands) {
     const score = fuzzyScore(query, command.title, command.aliases);
 
     if (score > 0) {
-      results.push({ command, score });
+      results.push({ ...command, score });
     }
   }
 
-  return results
-    .sort((a, b) => b.score - a.score)
-    .map(({ command }) => command);
+  return results.sort((a, b) => b.score - a.score);
 }
 
 function levenshteinDistance(a: string, b: string): number {

@@ -1,7 +1,7 @@
 import { render, useKeyboard } from "@opentui/react";
 import { StatusView } from "./StatusView.tsx";
 import { DiffView } from "./DiffView.tsx";
-import { updateData } from "./utils.ts";
+import { updateData, getGitRoot } from "./utils.ts";
 import { COMMANDS, type Command, runCommand } from "./subcommand.ts";
 import { useState, useEffect } from "react";
 import type { DiffMap } from "./diff.ts";
@@ -13,6 +13,7 @@ import { CommandPalette } from "./CommandPalette.tsx";
 function App() {
   const [showCommand, setShowCommand] = useState(false);
   const [feedback, setFeedback] = useState("");
+  const [gitRoot, setGitRoot] = useState<string>("");
   const [data, setData] = useState<{
     diffMap: DiffMap;
     statusGroups: StatusGroups;
@@ -20,13 +21,14 @@ function App() {
 
   useEffect(() => {
     (async () => {
+      const root = await getGitRoot();
+      setGitRoot(root);
       const d = await updateData();
       setData(d);
     })();
   }, []);
 
   useKeyboard(async (key) => {
-    setFeedback(key.name);
     if (key.name === "r") {
       const d = await updateData();
       setData(d);
@@ -66,6 +68,7 @@ function App() {
           const d = await updateData();
           setData(d);
         }}
+        cwd={gitRoot}
       />
       <box border>
         {data && (

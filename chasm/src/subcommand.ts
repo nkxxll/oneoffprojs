@@ -1,7 +1,25 @@
-export async function getGitDiff(): Promise<string> {
+export async function getGitRoot(): Promise<string> {
+  const proc = Bun.spawn(["git", "rev-parse", "--show-toplevel"], {
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+
+  const output = await new Response(proc.stdout).text();
+  const exitCode = await proc.exited;
+
+  if (exitCode !== 0) {
+    const error = await new Response(proc.stderr).text();
+    throw new Error(`git rev-parse failed: ${error}`);
+  }
+
+  return output.trim();
+}
+
+export async function getGitDiff(cwd: string): Promise<string> {
   const proc = Bun.spawn(["git", "diff"], {
     stdout: "pipe",
     stderr: "pipe",
+    cwd,
   });
 
   const output = await new Response(proc.stdout).text();
@@ -16,20 +34,20 @@ export async function getGitDiff(): Promise<string> {
 }
 
 export async function getGitStatus(): Promise<string> {
-const proc = Bun.spawn(["git", "status", "-b", "--porcelain"], {
-stdout: "pipe",
-stderr: "pipe",
-});
+  const proc = Bun.spawn(["git", "status", "-b", "--porcelain"], {
+    stdout: "pipe",
+    stderr: "pipe",
+  });
 
-const output = await new Response(proc.stdout).text();
-const exitCode = await proc.exited;
+  const output = await new Response(proc.stdout).text();
+  const exitCode = await proc.exited;
 
-if (exitCode !== 0) {
-const error = await new Response(proc.stderr).text();
-throw new Error(`git status failed: ${error}`);
-}
+  if (exitCode !== 0) {
+    const error = await new Response(proc.stderr).text();
+    throw new Error(`git status failed: ${error}`);
+  }
 
-return output;
+  return output;
 }
 
 export interface Command {
@@ -101,25 +119,34 @@ export const COMMANDS: Command[] = [
 
 export async function runCommand(
   shellCmd: ShellCommand,
-  userInput?: string,
+  userInput?: string | string[],
+  cwd?: string,
 ): Promise<string> {
   let args: string[];
   switch (shellCmd.title) {
     case "git:add":
-      args = ["git", "add", userInput || "."];
+      if (typeof userInput === "string" || typeof userInput === undefined) {
+        throw new Error("Invalid input in add command");
+      }
+      args = ["git", "add", ...userInput!];
       break;
     case "git:commit":
-      if (!userInput) throw new Error("Commit message required");
+      if (!userInput || typeof userInput !== "string")
+        throw new Error("Commit message required");
       args = ["git", "commit", "-m", userInput];
       break;
     case "git:amend":
-      if (!userInput) throw new Error("Amend message required");
+      if (!userInput || typeof userInput !== "string")
+        throw new Error("Amend message required");
       args = ["git", "commit", "--amend", "-m", userInput];
       break;
     default:
       args = [...shellCmd.command];
       if (shellCmd.input) {
-        if (!userInput) throw new Error("Input required for " + shellCmd.title);
+        if (!userInput || typeof userInput !== "string")
+          throw new Error(
+            "Input required or wring format for " + shellCmd.title,
+          );
         args.push(userInput);
       }
       break;
@@ -128,6 +155,7 @@ export async function runCommand(
   const proc = Bun.spawn(args, {
     stdout: "pipe",
     stderr: "pipe",
+    ...(cwd && { cwd }),
   });
 
   const output = await new Response(proc.stdout).text();
