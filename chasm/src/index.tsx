@@ -12,6 +12,8 @@ function App() {
   const [commandInput, setCommandInput] = useState("");
   const [feedback, setFeedback] = useState("");
   const [suggestions, setSuggestions] = useState<Command[]>([]);
+  const [mode, setMode] = useState<"command" | "message">("command");
+  const [pendingCommand, setPendingCommand] = useState<Command | null>(null);
   const [data, setData] = useState<{
     diffMap: DiffMap;
     statusGroups: StatusGroups;
@@ -24,37 +26,48 @@ function App() {
     })();
   }, []);
 
-  async function executeCommand(cmd: Command, input: string) {
-    try {
-      if (cmd) {
-        if (cmd.title === "Add All") {
-          await runCommand(cmd.command, ...cmd.args);
-        } else if (cmd.title === "Add File") {
-          const msg = input.split(" ").slice(1).join(" ");
-          if (!msg) {
-            setFeedback("Add File require <file>");
-            return;
-          }
-        } else if (cmd.title === "Commit") {
-          const msg = input.split(" ").slice(1).join(" ");
-          if (!msg) {
-            setFeedback("Commit requires a message");
-            return;
-          }
+  async function executeCommand(cmd: Command | null, input: string) {
+    if (mode === "message" && pendingCommand) {
+      const msg = input.trim();
+      if (!msg) {
+        setFeedback("Message required");
+        return;
+      }
+      try {
+        if (pendingCommand.title === "Commit") {
           await runCommand("git", "commit", "-m", msg);
-        } else if (cmd.title === "Amend") {
-          const msg = input.split(" ").slice(1).join(" ");
-          if (!msg) {
-            setFeedback("Amend requires a message");
-            return;
-          }
+        } else if (pendingCommand.title === "Amend") {
           await runCommand("git", "commit", "--amend", "-m", msg);
-        } else {
-          await runCommand(cmd.command, ...cmd.args);
         }
-        setFeedback(`${cmd.title} executed`);
+        setFeedback(`${pendingCommand.title} executed`);
         const d = await updateData();
         setData(d);
+        setMode("command");
+        setPendingCommand(null);
+        setShowCommand(false);
+        setCommandInput("");
+      } catch (e: any) {
+        setFeedback("Error: " + e.message);
+      }
+      return;
+    }
+
+    try {
+      if (cmd) {
+        if (cmd.title === "Commit" || cmd.title === "Amend") {
+          setMode("message");
+          setPendingCommand(cmd);
+          setFeedback(`Enter ${cmd.title.toLowerCase()} message:`);
+          setCommandInput("");
+          return;
+        } else {
+          await runCommand(cmd.title, ...cmd.args);
+          setFeedback(`${cmd.title} executed`);
+          const d = await updateData();
+          setData(d);
+          setShowCommand(false);
+          setCommandInput("");
+        }
       } else {
         const parts = input.split(/\s+/);
         const command = parts[0];
@@ -64,6 +77,8 @@ function App() {
           setFeedback("Added successfully");
           const d = await updateData();
           setData(d);
+          setShowCommand(false);
+          setCommandInput("");
         } else {
           setFeedback("Unknown command");
         }
@@ -74,7 +89,7 @@ function App() {
   }
 
   useEffect(() => {
-    if (!showCommand) return;
+    if (!showCommand || mode !== "command") return;
     const filtered = COMMANDS.filter(
       (c) =>
         c.title.toLowerCase().includes(commandInput.toLowerCase()) ||
@@ -83,7 +98,7 @@ function App() {
         ),
     );
     setSuggestions(filtered);
-  }, [commandInput, showCommand]);
+  }, [commandInput, showCommand, mode]);
 
   useKeyboard(async (key) => {
     if (key.name === "r") {
@@ -99,6 +114,8 @@ function App() {
       if (newShow) {
         setCommandInput("");
         setFeedback("");
+        setMode("command");
+        setPendingCommand(null);
       }
       return;
     }
@@ -130,15 +147,14 @@ function App() {
             value={commandInput}
             onInput={(e) => setCommandInput(e)}
             onSubmit={() => {
-              if (suggestions[0]) {
-                executeCommand(suggestions[0], commandInput);
-              }
+              executeCommand(suggestions[0] || null, commandInput);
             }}
           />
           <box />
-          {suggestions.slice(0, 5).map((cmd, i) => (
-            <text key={i}>{cmd.title}</text>
-          ))}
+          {mode === "command" &&
+            suggestions
+              .slice(0, 5)
+              .map((cmd, i) => <text key={i}>{cmd.title}</text>)}
         </box>
       )}
       {feedback && <text>{feedback}</text>}
