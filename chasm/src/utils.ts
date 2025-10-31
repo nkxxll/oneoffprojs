@@ -5,8 +5,8 @@ import { parseGitStatus, groupStatusFiles } from "./status";
 export async function updateData() {
   const [diff, status] = await Promise.all([getGitDiff(), getGitStatus()]);
   const diffMap = parseGitDiff(diff);
-  const statusFiles = parseGitStatus(status);
-  const statusGroups = groupStatusFiles(statusFiles);
+  const { branchInfo, statusFiles } = parseGitStatus(status);
+  const statusGroups = groupStatusFiles({ branchInfo, statusFiles });
   return { diffMap, statusGroups };
 }
 

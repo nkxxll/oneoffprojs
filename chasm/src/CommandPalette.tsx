@@ -15,9 +15,14 @@ export type ScoredCommand = Command & { score: number };
 export interface CommandPaletteProps {
   show: boolean;
   setFeedback: (feedback: string) => void;
+  onUpdate: () => Promise<void>;
 }
 
-export function CommandPalette({ show, setFeedback }: CommandPaletteProps) {
+export function CommandPalette({
+  show,
+  setFeedback,
+  onUpdate,
+}: CommandPaletteProps) {
   const [input, setInput] = useState("");
   const [message, setMessage] = useState("");
   const [showMessage, setShowMessage] = useState(false);
@@ -40,7 +45,7 @@ export function CommandPalette({ show, setFeedback }: CommandPaletteProps) {
     setSelectedIndex(0);
   }, [input]);
 
-  useKeyboard((key) => {
+  useKeyboard(async (key) => {
     if (!show) return;
     if (showFileSelector) {
       if (key.name === "up" || key.name === "k") {
@@ -70,8 +75,9 @@ export function CommandPalette({ show, setFeedback }: CommandPaletteProps) {
         if (!shellCommand) return;
         try {
           const userInput = Array.from(selectedFiles).join(" ");
-          runCommand(shellCommand, userInput);
+          await runCommand(shellCommand, userInput);
           setFeedback("git:add executed");
+          await onUpdate();
           setShowFileSelector(false);
           setInput("");
         } catch (e: any) {
@@ -118,6 +124,7 @@ export function CommandPalette({ show, setFeedback }: CommandPaletteProps) {
           const status = await getGitStatus();
           const lines = status
             .split("\n")
+            .slice(1)
             .filter((line) => line.trim() && line[1] !== " ");
           const unstagedFiles = lines.map((line) => line.slice(3));
           setFiles(unstagedFiles);
@@ -148,6 +155,7 @@ export function CommandPalette({ show, setFeedback }: CommandPaletteProps) {
       }
       await runCommand(shellCommand, userInput);
       setFeedback(`${cmd.title} executed`);
+      await onUpdate();
       setInput("");
       setShowMessage(false);
     } catch (e: any) {
@@ -215,6 +223,7 @@ export function CommandPalette({ show, setFeedback }: CommandPaletteProps) {
               try {
                 await runCommand(shellCommand, message);
                 setFeedback(`${pendingCommand.title} executed`);
+                await onUpdate();
                 setMessage("");
                 setPendingCommand(null);
                 setShowMessage(false);

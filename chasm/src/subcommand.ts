@@ -16,20 +16,20 @@ export async function getGitDiff(): Promise<string> {
 }
 
 export async function getGitStatus(): Promise<string> {
-  const proc = Bun.spawn(["git", "status", "--porcelain"], {
-    stdout: "pipe",
-    stderr: "pipe",
-  });
+const proc = Bun.spawn(["git", "status", "-b", "--porcelain"], {
+stdout: "pipe",
+stderr: "pipe",
+});
 
-  const output = await new Response(proc.stdout).text();
-  const exitCode = await proc.exited;
+const output = await new Response(proc.stdout).text();
+const exitCode = await proc.exited;
 
-  if (exitCode !== 0) {
-    const error = await new Response(proc.stderr).text();
-    throw new Error(`git status failed: ${error}`);
-  }
+if (exitCode !== 0) {
+const error = await new Response(proc.stderr).text();
+throw new Error(`git status failed: ${error}`);
+}
 
-  return output;
+return output;
 }
 
 export interface Command {

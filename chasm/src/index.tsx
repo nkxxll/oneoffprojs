@@ -59,7 +59,14 @@ function App() {
         duration={3000}
         onClose={() => setFeedback("")}
       />
-      <CommandPalette show={showCommand} setFeedback={setFeedback} />
+      <CommandPalette
+        show={showCommand}
+        setFeedback={setFeedback}
+        onUpdate={async () => {
+          const d = await updateData();
+          setData(d);
+        }}
+      />
       <box border>
         {data && (
           <box flexDirection="row" marginTop={1}>
