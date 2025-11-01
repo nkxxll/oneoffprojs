@@ -39,7 +39,6 @@ function App() {
     if (key.name === "escape") {
       setShowCommand(false);
     }
-    setFeedback(key.name);
     if (key.name === "p" && key.ctrl) {
       setShowCommand((show: boolean) => {
         setFeedback("");
