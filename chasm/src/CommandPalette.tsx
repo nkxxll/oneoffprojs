@@ -94,7 +94,9 @@ export function CommandPalette({
       return;
     }
     if (key.ctrl && key.name === "w") {
-      setInput(input.split(" ").slice(0, -1).join(" ") || "");
+      setInput((inp: string) => {
+        return inp.split(" ").slice(0, -1).join(" ") || "";
+      });
       return;
     }
     if (key.ctrl && key.name === "p") {
@@ -155,9 +157,10 @@ export function CommandPalette({
         userInput =
           input.replace(new RegExp(`^${cmdName}\\s*`), "").trim() || undefined;
       }
-      await runCommand(shellCommand, userInput, cwd);
-      setFeedback(`${cmd.title} executed`);
-      await onUpdate();
+      runCommand(shellCommand, userInput, cwd).then(() => {
+        setFeedback(`${cmd.title} executed`);
+        onUpdate();
+      });
       setInput("");
       setShowMessage(false);
     } catch (e: any) {

@@ -1,0 +1,19 @@
+export const GRUVBOX_BG = "#1d2021";
+export const GRUVBOX_FG = "#d5c4a1";
+
+export const COLOR0 = "#1d2021"; // black
+export const COLOR1 = "#cc241d"; // red
+export const COLOR2 = "#98971a"; // green
+export const COLOR3 = "#d79921"; // yellow
+export const COLOR4 = "#458588"; // blue
+export const COLOR5 = "#b16286"; // magenta
+export const COLOR6 = "#689d6a"; // cyan
+export const COLOR7 = "#a89984"; // white
+export const COLOR8 = "#928374"; // bright black
+export const COLOR9 = "#fb4934"; // bright red
+export const COLOR10 = "#b8bb26"; // bright green
+export const COLOR11 = "#fabd2f"; // bright yellow
+export const COLOR12 = "#83a598"; // bright blue
+export const COLOR13 = "#d3869b"; // bright purple
+export const COLOR14 = "#8ec07c"; // bright aqua
+export const COLOR15 = "#d5c4a1"; // bright white

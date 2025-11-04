@@ -1,6 +1,7 @@
 import { TextAttributes, type Color } from "@opentui/core";
 import { type DiffMap, type DiffFile } from "./diff.ts";
 import { useState } from "react";
+import { COLOR9 as RED, COLOR10 as GREEN, COLOR11 as YELLOW, COLOR12 as BLUE } from "./themes.ts";
 
 interface DiffViewProps {
   diffMap: DiffMap;
@@ -21,12 +22,12 @@ export function DiffView({ diffMap }: DiffViewProps) {
   };
 
   const getFileTitle = (file: DiffFile): { text: string; color: Color } => {
-    if (file.isNew) return { text: `CREATED: ${file.to}`, color: "green" };
-    if (file.isDeleted) return { text: `DELETED: ${file.from}`, color: "red" };
+    if (file.isNew) return { text: `CREATED: ${file.to}`, color: GREEN };
+    if (file.isDeleted) return { text: `DELETED: ${file.from}`, color: RED };
     if (file.hasModeChange)
       return {
         text: `MODE CHANGED: ${file.to} (${file.modeChange})`,
-        color: "yellow",
+        color: YELLOW,
       };
     const from = file.from.slice(2);
     const to = file.from.slice(2);
@@ -35,7 +36,7 @@ export function DiffView({ diffMap }: DiffViewProps) {
         from === to
           ? `MODIFIED: ${from}`
           : `RENAMED: ${file.from} -> ${file.to}`,
-      color: "blue",
+      color: BLUE,
     };
   };
 
@@ -47,38 +48,37 @@ export function DiffView({ diffMap }: DiffViewProps) {
         return (
           <box key={fileIndex} flexDirection="column">
             {/* Vertical line separator (using a thin border) */}
-            <text
-              style={{ fg: color }}
-              attributes={TextAttributes.BOLD}
-              onMouseDown={() => toggleFold(fileIndex)}
-            >
-              {title} {isFolded ? "[+]" : "[-]"}{" "}
-            </text>
+            <box onMouseDown={() => toggleFold(fileIndex)}>
+              <text
+                style={{ fg: color }}
+                attributes={TextAttributes.BOLD}
+              selectable={false}
+             >
+             {title} {isFolded ? "[+]" : "[-]"}{" "}
+             </text>
+            </box>
             {!isFolded && (
               <box flexDirection="column" marginLeft={2}>
                 {file.hunks.map((hunk, hunkIndex) => (
-                  <box key={hunkIndex} flexDirection="column" marginTop={1}>
+                  <box
+                    key={`${fileIndex}-${hunkIndex}`}
+                    flexDirection="column"
+                    marginTop={1}
+                  >
                     {/* <text attributes={TextAttributes.DIM}>{hunk.header}</text> */}
                     {hunk.lines.map((line, lineIndex) => {
-                      let lineColor;
-                      if (line.kind === "added") lineColor = "green";
-                      else if (line.kind === "removed") lineColor = "red";
-                      return (
-                        <>
-                          {lineColor ? (
-                            <text key={lineIndex} style={{ fg: lineColor }}>
-                              {line.content}
-                            </text>
-                          ) : (
-                            <text
-                              key={lineIndex}
-                              attributes={TextAttributes.DIM}
-                            >
-                              {line.content}
-                            </text>
-                          )}
-                        </>
-                      );
+                    let lineColor;
+                    if (line.kind === "added") lineColor = GREEN;
+                    else if (line.kind === "removed") lineColor = RED;
+                    return (
+                    <text
+                    key={`${fileIndex}-${hunkIndex}-${lineIndex}`}
+                    style={lineColor ? { fg: lineColor } : undefined}
+                    attributes={lineColor ? undefined : TextAttributes.DIM}
+                    >
+                    {line.content}
+                    </text>
+                    );
                     })}
                   </box>
                 ))}
