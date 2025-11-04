@@ -19,6 +19,17 @@ export interface CommandPaletteProps {
   cwd: string;
 }
 
+function ctrlW(input: string) {
+  const temp =
+    input
+      .split(" ")
+      .filter((v) => v !== "")
+      .slice(0, -1)
+      .join(" ") + " ";
+  const res = temp === " " ? "" : temp;
+  return res || "";
+}
+
 export function CommandPalette({
   show,
   setFeedback,
@@ -96,9 +107,11 @@ export function CommandPalette({
       return;
     }
     if (key.ctrl && key.name === "w") {
-      setInput((inp: string) => {
-        return inp.split(" ").slice(0, -1).join(" ") || "";
-      });
+      if (!showMessage) {
+        setInput(ctrlW);
+      } else {
+        setMessage(ctrlW);
+      }
       return;
     }
     if (key.ctrl && key.name === "p") {
@@ -148,7 +161,6 @@ export function CommandPalette({
       setPendingCommand(cmd);
       setShowMessage(true);
       setInput("");
-      setFeedback(`Enter ${cmd.title.split(":")[1]} message:`);
       return;
     }
     try {
