@@ -1,7 +1,12 @@
 import { TextAttributes, type Color } from "@opentui/core";
 import { type DiffMap, type DiffFile } from "./diff.ts";
 import { useState } from "react";
-import { COLOR9 as RED, COLOR10 as GREEN, COLOR11 as YELLOW, COLOR12 as BLUE } from "./themes.ts";
+import {
+  COLOR9 as RED,
+  COLOR10 as GREEN,
+  COLOR11 as YELLOW,
+  COLOR4 as BLUE,
+} from "./themes.ts";
 
 interface DiffViewProps {
   diffMap: DiffMap;
@@ -41,7 +46,7 @@ export function DiffView({ diffMap }: DiffViewProps) {
   };
 
   return (
-    <scrollbox flexGrow={1} marginLeft={2}>
+    <scrollbox border borderStyle="rounded" flexGrow={1} marginLeft={2}>
       {diffMap.files.map((file, fileIndex) => {
         const { text: title, color } = getFileTitle(file);
         const isFolded = folds.get(fileIndex);
@@ -52,10 +57,10 @@ export function DiffView({ diffMap }: DiffViewProps) {
               <text
                 style={{ fg: color }}
                 attributes={TextAttributes.BOLD}
-              selectable={false}
-             >
-             {title} {isFolded ? "[+]" : "[-]"}{" "}
-             </text>
+                selectable={false}
+              >
+                {title} {isFolded ? "[+]" : "[-]"}{" "}
+              </text>
             </box>
             {!isFolded && (
               <box flexDirection="column" marginLeft={2}>
@@ -67,18 +72,20 @@ export function DiffView({ diffMap }: DiffViewProps) {
                   >
                     {/* <text attributes={TextAttributes.DIM}>{hunk.header}</text> */}
                     {hunk.lines.map((line, lineIndex) => {
-                    let lineColor;
-                    if (line.kind === "added") lineColor = GREEN;
-                    else if (line.kind === "removed") lineColor = RED;
-                    return (
-                    <text
-                    key={`${fileIndex}-${hunkIndex}-${lineIndex}`}
-                    style={lineColor ? { fg: lineColor } : undefined}
-                    attributes={lineColor ? undefined : TextAttributes.DIM}
-                    >
-                    {line.content}
-                    </text>
-                    );
+                      let lineColor;
+                      if (line.kind === "added") lineColor = GREEN;
+                      else if (line.kind === "removed") lineColor = RED;
+                      return (
+                        <text
+                          key={`${fileIndex}-${hunkIndex}-${lineIndex}`}
+                          style={lineColor ? { fg: lineColor } : undefined}
+                          attributes={
+                            lineColor ? undefined : TextAttributes.DIM
+                          }
+                        >
+                          {line.content}
+                        </text>
+                      );
                     })}
                   </box>
                 ))}

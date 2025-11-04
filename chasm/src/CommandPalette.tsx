@@ -87,8 +87,10 @@ export function CommandPalette({
         }
         return;
       }
-      if (key.name === "escape") {
+      if (key.name === "escape" || (key.name === "[" && key.ctrl)) {
         setShowFileSelector(false);
+        // input captures the [ key as input
+        setInput("");
         return;
       }
       return;

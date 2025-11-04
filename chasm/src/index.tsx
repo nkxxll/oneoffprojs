@@ -36,7 +36,7 @@ function App() {
       return;
     }
 
-    if (key.name === "escape") {
+    if (key.name === "escape" || (key.name === "[" && key.ctrl)) {
       setShowCommand(false);
     }
     if (key.name === "p" && key.ctrl) {
@@ -69,14 +69,12 @@ function App() {
         }}
         cwd={gitRoot}
       />
-      <box border>
-        {data && (
-          <box flexDirection="row" marginTop={1}>
-            <StatusView statusGroups={data.statusGroups} />
-            <DiffView diffMap={data.diffMap} />
-          </box>
-        )}
-      </box>
+      {data && (
+        <box flexDirection="row">
+          <StatusView statusGroups={data.statusGroups} />
+          <DiffView diffMap={data.diffMap} />
+        </box>
+      )}
     </>
   );
 }
