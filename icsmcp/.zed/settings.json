@@ -1,0 +1,77 @@
+// Folder-specific settings
+//
+// For a full list of overridable settings, and general information on folder-specific settings,
+// see the documentation: https://zed.dev/docs/configuring-zed#settings-files
+{
+  "languages": {
+    "JavaScript": {
+      "formatter": [],
+      "code_actions_on_format": {
+        "source.fixAll.eslint": true
+      }
+    },
+    "TypeScript": {
+      "formatter": [],
+      "code_actions_on_format": {
+        "source.fixAll.eslint": true
+      }
+    }
+  },
+  "lsp": {
+    "vtsls": {
+      "settings": {
+        // For JavaScript:
+        "javascript": {
+          "inlayHints": {
+            "parameterNames": {
+              "enabled": "all",
+              "suppressWhenArgumentMatchesName": false
+            },
+            "parameterTypes": {
+              "enabled": true
+            },
+            "variableTypes": {
+              "enabled": true,
+              "suppressWhenTypeMatchesName": true
+            },
+            "propertyDeclarationTypes": {
+              "enabled": true
+            },
+            "functionLikeReturnTypes": {
+              "enabled": true
+            },
+            "enumMemberValues": {
+              "enabled": true
+            }
+          }
+        },
+        // For TypeScript:
+        "typescript": {
+          "inlayHints": {
+            "parameterNames": {
+              "enabled": "all",
+              "suppressWhenArgumentMatchesName": false
+            },
+            "parameterTypes": {
+              "enabled": true
+            },
+            "variableTypes": {
+              "enabled": true,
+              "suppressWhenTypeMatchesName": true
+            },
+            "propertyDeclarationTypes": {
+              "enabled": true
+            },
+            "functionLikeReturnTypes": {
+              "enabled": true
+            },
+            "enumMemberValues": {
+              "enabled": true
+            }
+          }
+        },
+        "autoUseWorkspaceTsdk": true
+      }
+    }
+  }
+}

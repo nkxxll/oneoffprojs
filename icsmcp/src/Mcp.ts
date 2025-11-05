@@ -1,7 +1,7 @@
-import { McpServer } from "@effect/ai";
-import { BunSink, BunStream } from "@effect/platform-bun";
-import { Effect, Layer, Logger, Schema } from "effect";
-import { ICSToolImplLayer, ICSToolkitLayer } from "./Tools.js";
+import { McpServer } from "@effect/ai"
+import { BunSink, BunStream } from "@effect/platform-bun"
+import { Effect, Layer, Logger, Schema } from "effect"
+import { ICSToolImplLayer, ICSToolkitLayer } from "./Tools.js"
 
 // TODO this could be the place where we store the state of the mcp server with the ics calendar events
 const Readme = McpServer.resource({
@@ -15,8 +15,8 @@ const Readme = McpServer.resource({
 Validates the date and information for an Event.
 ## CreateCalendar
 Is able to create an ICS Calendar File
-`),
-});
+`)
+})
 
 const EventPrompt = McpServer.prompt({
   name: "Event",
@@ -24,32 +24,32 @@ const EventPrompt = McpServer.prompt({
   parameters: Schema.Struct({
     start: Schema.String,
     end: Schema.String,
-    day: Schema.String,
+    day: Schema.String
   }),
   completion: {
     start: () => Effect.succeed([]),
     end: () => Effect.succeed([]),
-    day: () => Effect.succeed([":today", ":tomorrow", ":nextweek"]),
+    day: () => Effect.succeed([":today", ":tomorrow", ":nextweek"])
   },
-  content: ({ start, end, day }) =>
+  content: ({ day, end, start }) =>
     Effect.succeed(
-      `Book an event with the start at ${start}, the end at ${end} and day ${day} use the EventCreator tool.`,
-    ),
-});
+      `Book an event with the start at ${start}, the end at ${end} and day ${day} use the EventCreator tool.`
+    )
+})
 
 // Merge all the resources and prompts into a single server layer
 export const ServerLayer = Layer.mergeAll(
   Readme,
   EventPrompt,
-  ICSToolkitLayer.pipe(Layer.provide(ICSToolImplLayer)),
+  ICSToolkitLayer.pipe(Layer.provide(ICSToolImplLayer))
 ).pipe(
   Layer.provide(
     McpServer.layerStdio({
       name: "ICS mcp",
       version: "1.0.0",
       stdin: BunStream.stdin,
-      stdout: BunSink.stdout,
-    }),
+      stdout: BunSink.stdout
+    })
   ),
-  Layer.provide(Logger.add(Logger.prettyLogger({ stderr: true }))),
-);
+  Layer.provide(Logger.add(Logger.prettyLogger({ stderr: true })))
+)
