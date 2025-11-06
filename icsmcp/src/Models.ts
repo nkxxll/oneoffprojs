@@ -2,9 +2,9 @@ import { Data, Schema } from "effect"
 
 export const EventParams = {
   start: Schema.String,
+  title: Schema.String,
   end: Schema.optional(Schema.String),
   duration: Schema.optional(Schema.Number), // unix mills :D
-  title: Schema.String,
   description: Schema.optional(Schema.String),
   location: Schema.optional(Schema.String)
 }
@@ -18,6 +18,7 @@ export const CalendarParams = {
   calendarList: Schema.Array(EventParamsSchema)
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const CalendarParamsSchema = Schema.Struct(CalendarParams)
 
 export type CalendarParams = Schema.Schema.Type<typeof CalendarParamsSchema>

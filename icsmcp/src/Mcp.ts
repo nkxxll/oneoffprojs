@@ -1,5 +1,7 @@
-import { McpServer } from "@effect/ai"
-import { BunSink, BunStream } from "@effect/platform-bun"
+import { McpSchema, McpServer } from "@effect/ai"
+import { FileSystem } from "@effect/platform"
+import { BunContext, BunSink, BunStream } from "@effect/platform-bun"
+import type { PlatformError } from "@effect/platform/Error"
 import { Effect, Layer, Logger, Schema } from "effect"
 import { ICSToolImplLayer, ICSToolkitLayer } from "./Tools.js"
 
@@ -16,6 +18,28 @@ Validates the date and information for an Event.
 ## CreateCalendar
 Is able to create an ICS Calendar File
 `)
+})
+
+const timestamp = McpSchema.param("timestamp", Schema.NumberFromString)
+
+const CalendarFiles = McpServer.resource`file://calendars/${timestamp}.ics`({
+  name: "Calendars",
+  description: "This is a directory with all the created calendars named with the timestamp of their creation.",
+  mimeType: "text/calendar",
+  audience: ["assistant", "user"],
+  content(
+    _uri: string,
+    timestamp: number
+  ) {
+    return Effect.gen(function*() {
+      const fs = yield* FileSystem.FileSystem
+      const path = `calendars/${timestamp}.ics`
+      const content = yield* fs.readFileString(path)
+      return content
+    }).pipe(
+      Effect.catchTag("SystemError", (e: PlatformError) => Effect.fail(`Calendar file not found: ${e.cause}`))
+    )
+  }
 })
 
 const EventPrompt = McpServer.prompt({
@@ -41,8 +65,10 @@ const EventPrompt = McpServer.prompt({
 export const ServerLayer = Layer.mergeAll(
   Readme,
   EventPrompt,
+  CalendarFiles,
   ICSToolkitLayer.pipe(Layer.provide(ICSToolImplLayer))
 ).pipe(
+  Layer.provide(BunContext.layer),
   Layer.provide(
     McpServer.layerStdio({
       name: "ICS mcp",

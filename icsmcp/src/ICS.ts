@@ -10,48 +10,38 @@ import {
 
 const formatDate = (date: Date): string => date.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z"
 
-const getStart = (event: EventParams) =>
+const _parseDate = (dateString: string, error: InvalidStartDateError | InvalidEndDateError) =>
   Effect.gen(function*() {
     const date = yield* Effect.try({
-      try: () => new Date(event.start),
-      catch: () => new InvalidStartDateError({ dateString: event.start })
+      try: () => new Date(dateString),
+      catch: () => error
     })
-
     if (isNaN(date.getTime())) {
-      return yield* Effect.fail(
-        new InvalidStartDateError({ dateString: event.start })
-      )
+      return yield* Effect.fail(error)
     }
-
     return date
   })
+
+const _validateDuration = (duration: number) => {
+  if (typeof duration !== "number" || duration <= 0) {
+    return Effect.fail(new InvalidDurationError({ duration }))
+  }
+  return Effect.succeed(duration)
+}
+
+const getStart = (event: EventParams) => _parseDate(event.start, new InvalidStartDateError({ dateString: event.start }))
+
 const getEnd = (event: EventParams) =>
   Effect.gen(function*() {
     const start = yield* getStart(event)
 
     if (event.end && event.duration) {
-      // Both provided - validate both but prefer duration for calculation
-      const endDate = yield* Effect.try({
-        try: () => new Date(event.end!),
-        catch: () => new InvalidEndDateError({ dateString: event.end! })
-      })
-
-      if (isNaN(endDate.getTime())) {
-        return yield* Effect.fail(
-          new InvalidEndDateError({ dateString: event.end })
-        )
-      }
-
-      if (event.duration <= 0) {
-        return yield* Effect.fail(
-          new InvalidDurationError({ duration: event.duration })
-        )
-      }
+      const endDate = yield* _parseDate(event.end, new InvalidEndDateError({ dateString: event.end }))
+      yield* _validateDuration(event.duration)
 
       // Use duration for calculation but warn if it doesn't match end
       const calculatedEnd = new Date(start.getTime() + event.duration)
-      if (Math.abs(calculatedEnd.getTime() - endDate.getTime()) > 1000) {
-        // Allow 1s tolerance
+      if (Math.abs(calculatedEnd.getTime() - endDate.getTime()) > 1000) { // Allow 1s tolerance
         yield* Effect.logWarning(
           "Duration and end time don't match, using duration"
         )
@@ -61,33 +51,17 @@ const getEnd = (event: EventParams) =>
     }
 
     if (event.duration && !event.end) {
-      if (event.duration <= 0) {
-        return yield* Effect.fail(
-          new InvalidDurationError({ duration: event.duration })
-        )
-      }
-
+      yield* _validateDuration(event.duration)
       return new Date(start.getTime() + event.duration)
     }
 
     if (event.end && !event.duration) {
-      const endDate = yield* Effect.try({
-        try: () => new Date(event.end!),
-        catch: () => new InvalidEndDateError({ dateString: event.end! })
-      })
-
-      if (isNaN(endDate.getTime())) {
-        return yield* Effect.fail(
-          new InvalidEndDateError({ dateString: event.end })
-        )
-      }
-
+      const endDate = yield* _parseDate(event.end, new InvalidEndDateError({ dateString: event.end }))
       if (endDate <= start) {
         return yield* Effect.fail(
           new EndBeforeStartError({ start, end: endDate })
         )
       }
-
       return endDate
     }
 
@@ -98,37 +72,20 @@ const getEnd = (event: EventParams) =>
 
 export const validateIcsEvent = (event: EventParams) =>
   Effect.gen(function*() {
-    // Validate start date
     yield* getStart(event)
 
-    // Validate end/date logic without calculating (to avoid duplicate work)
     if (event.end) {
-      const endDate = yield* Effect.try({
-        try: () => new Date(event.end!),
-        catch: () => new InvalidEndDateError({ dateString: event.end! })
-      })
-
-      if (isNaN(endDate.getTime())) {
-        return yield* Effect.fail(
-          new InvalidEndDateError({ dateString: event.end })
-        )
-      }
+      yield* _parseDate(event.end, new InvalidEndDateError({ dateString: event.end }))
     }
 
     if (event.duration !== undefined) {
-      if (typeof event.duration !== "number" || event.duration <= 0) {
-        return yield* Effect.fail(
-          new InvalidDurationError({ duration: event.duration })
-        )
-      }
+      yield* _validateDuration(event.duration)
     }
 
-    // Validate title is not empty
     if (!event.title || event.title.trim().length === 0) {
       return yield* Effect.fail(new InvalidTitleError({ title: event.title }))
     }
 
-    // Success - return the validated event
     return event
   })
 
