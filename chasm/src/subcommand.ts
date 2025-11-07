@@ -62,6 +62,11 @@ export interface ShellCommand {
 }
 
 export const SHELL_COMMANDS: ShellCommand[] = [
+  {
+    title: "git:fast",
+    command: [],
+    input: true,
+  },
   { title: "git:add", command: ["git", "add"], input: true },
   { title: "git:add-all", command: ["git", "add", "--all"], input: false },
   { title: "git:commit", command: ["git", "commit"], input: true },
@@ -93,6 +98,7 @@ export const SHELL_COMMANDS: ShellCommand[] = [
 ];
 
 export const COMMANDS: Command[] = [
+  { title: "git:fast", aliases: ["gf", "fast", "gfast", "quick"] },
   { title: "git:add", aliases: ["add", "stage"] },
   { title: "git:add-all", aliases: ["addall", "stageall", "aa"] },
   { title: "git:commit", aliases: ["commit", "cm"] },
@@ -140,6 +146,50 @@ export async function runCommand(
         throw new Error("Amend message required");
       args = ["git", "commit", "--amend", "-m", userInput];
       break;
+    case "git:fast": {
+      if (!userInput || typeof userInput !== "string")
+        throw new Error("Commit message required for git:fast");
+
+      let output = "";
+
+      // 1. git add --all
+      const addProc = Bun.spawn(["git", "add", "--all"], {
+        cwd,
+        stdout: "pipe",
+        stderr: "pipe",
+      });
+      output += await new Response(addProc.stdout).text();
+      if ((await addProc.exited) !== 0) {
+        const error = await new Response(addProc.stderr).text();
+        throw new Error(`git:fast (add) failed: ${error}`);
+      }
+
+      // 2. git commit -m "..."
+      const commitProc = Bun.spawn(["git", "commit", "-m", userInput], {
+        cwd,
+        stdout: "pipe",
+        stderr: "pipe",
+      });
+      output += await new Response(commitProc.stdout).text();
+      if ((await commitProc.exited) !== 0) {
+        const error = await new Response(commitProc.stderr).text();
+        throw new Error(`git:fast (commit) failed: ${error}`);
+      }
+
+      // 3. git push
+      const pushProc = Bun.spawn(["git", "push"], {
+        cwd,
+        stdout: "pipe",
+        stderr: "pipe",
+      });
+      output += await new Response(pushProc.stdout).text();
+      if ((await pushProc.exited) !== 0) {
+        const error = await new Response(pushProc.stderr).text();
+        throw new Error(`git:fast (push) failed: ${error}`);
+      }
+      return output;
+    }
+
     default:
       args = [...shellCmd.command];
       if (shellCmd.input) {

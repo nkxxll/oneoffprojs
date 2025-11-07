@@ -157,7 +157,11 @@ export function CommandPalette({
       })();
       return;
     }
-    if (cmd.title === "git:commit" || cmd.title === "git:amend") {
+    if (
+      cmd.title === "git:commit" ||
+      cmd.title === "git:amend" ||
+      cmd.title === "git:fast"
+    ) {
       setPendingCommand(cmd);
       setShowMessage(true);
       setInput("");
