@@ -58,8 +58,13 @@ def get_doi(title: str, timeout: int = 5) -> Optional[str]:
 
 
 def main():
+    if len(sys.argv) == 2:
+        papers = sys.argv[1]
+    else:
+        papers = "papers.json"
+
     # Load titles from papers.json
-    with open("papers.json") as f:
+    with open(papers) as f:
         titles = json.load(f)
 
     dois = []
