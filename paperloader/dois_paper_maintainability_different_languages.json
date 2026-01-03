@@ -1,0 +1,18 @@
+{
+  "total": 3,
+  "found": 3,
+  "papers": [
+    {
+      "title": "Popularity, interoperability, and impact of programming languages in 100,000 open source projects",
+      "doi": "10.1109/compsac.2013.55"
+    },
+    {
+      "title": "A large scale study of programming languages and code quality in github",
+      "doi": "10.1145/2635868.2635922"
+    },
+    {
+      "title": "Got issues? who cares about it? A large scale investigation of issue trackers from github",
+      "doi": "10.1109/issre.2013.6698918"
+    }
+  ]
+}
