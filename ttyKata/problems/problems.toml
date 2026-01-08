@@ -1,0 +1,29 @@
+[[problems]]
+name = "watermellon two"
+description = "Can the watermellon be divided by 2 input is between 1 <= 100 there can be multiple input in multiple lines only seperated by new lines"
+inputs = ["problems/watermellon/input.txt"]
+outputs = ["problems/watermellon/output.txt"]
+
+[[problems]]
+name = "watermellon three"
+description = "Can the watermellon be divided by 3 input is between 1 <= 100 there can be multiple input in multiple lines only seperated by new lines"
+inputs = ["problems/watermellon/input2.txt"]
+outputs = ["problems/watermellon/output2.txt"]
+
+[[problems]]
+name = "sum array"
+description = "Sum all elements in an array. Input format: first line is number of test cases, next line is the count of elements, then space-separated integers. Output the sum for each test case."
+inputs = ["problems/sum_array/input.txt"]
+outputs = ["problems/sum_array/output.txt"]
+
+[[problems]]
+name = "find max"
+description = "Find the maximum element in an array. Input format: first line is number of test cases, next line is the count of elements, then space-separated integers. Output the max value for each test case."
+inputs = ["problems/find_max/input.txt"]
+outputs = ["problems/find_max/output.txt"]
+
+[[problems]]
+name = "count even"
+description = "Count even numbers in an array. Input format: first line is number of test cases, next line is the count of elements, then space-separated integers. Output the count of even numbers for each test case."
+inputs = ["problems/count_even/input.txt"]
+outputs = ["problems/count_even/output.txt"]
