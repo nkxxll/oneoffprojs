@@ -5,7 +5,7 @@ import type { PlatformError } from "@effect/platform/Error"
 import { Effect, Layer, Logger, Schema } from "effect"
 import { ICSToolImplLayer, ICSToolkitLayer } from "./Tools.js"
 
-// TODO this could be the place where we store the state of the mcp server with the ics calendar events
+// TODO: this could be the place where we store the state of the mcp server with the ics calendar events
 const Readme = McpServer.resource({
   uri: "file:///README.md",
   name: "README",
