@@ -5,7 +5,8 @@ const print = std.debug.print;
 
 const FILENAME = "src/main.zig";
 pub fn main() !void {
-    // make a gpt and pass it once
+    // @TODO make a gpt and pass it once
+    // @tOdO this is another test
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer _ = gpa.deinit();
     const alloc = gpa.allocator();
@@ -14,7 +15,12 @@ pub fn main() !void {
     defer alloc.free(content);
 
     const list = try qtaks.parse_file_content(alloc, FILENAME, content);
-    defer alloc.free(list);
+    defer {
+        for (list) |item| {
+            alloc.free(item);
+        }
+        alloc.free(list);
+    }
 
     const output = try std.mem.join(alloc, "\n", list);
     defer alloc.free(output);
