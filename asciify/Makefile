@@ -5,6 +5,6 @@ test:
 
 install:
 	@mkdir -p ~/.local/bin
-	@cp asciify.sh ~/.local/bin/asciify
+	@cp asciify.sh ~/stow_dotfiles/local/.local/bin/asciify
 	@chmod +x ~/.local/bin/asciify
 	@echo "Installed asciify to ~/.local/bin/asciify"

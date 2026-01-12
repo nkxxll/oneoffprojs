@@ -70,6 +70,76 @@ test_asciify "français" "francais" "French a cedilla combo"
 test_asciify "coeleste" "coeleste" "Latin e ligature replaced"
 test_asciify "Ångström" "Angstrom" "Swedish a ring"
 
+test_asciify "/// Measure N (Length of the program):
+///  Is the sum of the total number of the operators and
+/// operands in the program?
+///  N=N1+N2
+/// Measure n (Vocabulary of the program):
+/// Is the sum of the number of unique operators and
+/// operands?
+///  n=n1+n2
+///  Measure V (Volume of the program):
+/// Is for the size of any implementation of any
+/// algorithm?
+///  V = (N1+N2) log2 (n1+n2)
+///  V = N log2 (n)
+/// Measure D (Difficulty of the program):
+/// Is proportional to a number of unique operators and
+/// total usage of operands.
+///  D = (2/n1)*(n2/N2)
+/// Measure V* (Potential or minimal Volume V*):
+///  V*= (2+n2) log2 (2+n2)
+/// Measure L (Implementation Level):
+///  L = V*/V
+/// Measure L' (Program Level Estimator L'):
+///  L'= (2/n1)*(n2/N2)
+/// Measure I (Intelligent Content):
+///  I = L'V
+/// Measure E - Effort required implementing or
+/// understanding the program is directly proportional to
+/// difficulty and volume.
+///  E = D*V
+/// Measure B - Number of bugs expected in the program:
+///  Is proportional to the effort?
+///  B=E0.667/3000
+/// Measure T -Estimated time is taken to write the
+/// program:
+///  Is proportional to the effort? T=E/S [S=18]" "/// Measure N (Length of the program):
+///  Is the sum of the total number of the operators and
+/// operands in the program?
+///  N=N1+N2
+/// Measure n (Vocabulary of the program):
+/// Is the sum of the number of unique operators and
+/// operands?
+///  n=n1+n2
+///  Measure V (Volume of the program):
+/// Is for the size of any implementation of any
+/// algorithm?
+///  V = (N1+N2) log2 (n1+n2)
+///  V = N log2 (n)
+/// Measure D (Difficulty of the program):
+/// Is proportional to a number of unique operators and
+/// total usage of operands.
+///  D = (2/n1)*(n2/N2)
+/// Measure V* (Potential or minimal Volume V*):
+///  V*= (2+n2) log2 (2+n2)
+/// Measure L (Implementation Level):
+///  L = V*/V
+/// Measure L' (Program Level Estimator L'):
+///  L'= (2/n1)*(n2/N2)
+/// Measure I (Intelligent Content):
+///  I = L'V
+/// Measure E - Effort required implementing or
+/// understanding the program is directly proportional to
+/// difficulty and volume.
+///  E = D*V
+/// Measure B - Number of bugs expected in the program:
+///  Is proportional to the effort?
+///  B=E0.667/3000
+/// Measure T -Estimated time is taken to write the
+/// program:
+///  Is proportional to the effort? T=E/S [S=18]" "halstead single"
+
 echo ""
 echo "=============================="
 echo -e "Tests passed: ${GREEN}$passed${NC}"
