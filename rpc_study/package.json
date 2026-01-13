@@ -1,0 +1,23 @@
+{
+  "name": "rpc-study",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/server/index.js",
+    "test": "node dist/client/test.js",
+    "test:advanced": "node dist/client/advanced-test.js"
+  },
+  "dependencies": {
+    "vscode-languageserver": "^9.0.1",
+    "vscode-languageserver-protocol": "^3.17.0",
+    "vscode-languageclient": "^9.0.1",
+    "vscode-jsonrpc": "^8.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.75.0",
+    "typescript": "^5.0.0"
+  }
+}
