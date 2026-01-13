@@ -1,7 +1,9 @@
+// @warning does it work
 const std = @import("std");
 const Allocator = std.mem.Allocator;
 const ArrayList = std.ArrayList;
 pub const basic = @import("basic.zig");
+pub const fs = @import("fs.zig");
 const print = std.debug.print;
 
 pub const Tag = enum {
@@ -84,7 +86,7 @@ pub const QuickfixItem = struct {
     col: usize,
 };
 
-fn find_project_root(allocator: Allocator) ![]const u8 {
+pub fn find_project_root(allocator: Allocator) ![]const u8 {
     var cwd = try std.fs.cwd().openDir(".", .{});
     defer cwd.close();
 
@@ -172,4 +174,38 @@ pub fn parse_file_content(allocator: Allocator, file_path: []const u8, content: 
     }
 
     return try quickfix_list.toOwnedSlice(allocator);
+}
+
+pub fn process_directory(allocator: Allocator, root_path: []const u8) ![][]const u8 {
+    var file_list = try ArrayList([]const u8).initCapacity(allocator, 256);
+    defer {
+        for (file_list.items) |item| {
+            allocator.free(item);
+        }
+        file_list.deinit(allocator);
+    }
+
+    try fs.walk_directory(allocator, root_path, &file_list);
+
+    var all_results = try ArrayList([]const u8).initCapacity(allocator, 512);
+    defer all_results.deinit(allocator);
+
+    for (file_list.items) |file_path| {
+        const content = basic.read_entire_file(allocator, file_path) catch continue;
+        defer allocator.free(content);
+
+        // Make path relative to root
+        const relative_path = if (std.mem.startsWith(u8, file_path, root_path)) 
+            file_path[root_path.len + 1..] 
+        else 
+            file_path;
+
+        const results = try parse_file_content(allocator, relative_path, content);
+        for (results) |result| {
+            try all_results.append(allocator, result);
+        }
+        allocator.free(results);
+    }
+
+    return try all_results.toOwnedSlice(allocator);
 }

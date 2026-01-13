@@ -1,9 +1,7 @@
 const std = @import("std");
 const qtaks = @import("qtaks");
-const basic = qtaks.basic;
 const print = std.debug.print;
 
-const FILENAME = "src/main.zig";
 pub fn main() !void {
     // @TODO make a gpt and pass it once
     // @tOdO this is another test
@@ -11,10 +9,10 @@ pub fn main() !void {
     defer _ = gpa.deinit();
     const alloc = gpa.allocator();
 
-    const content = try basic.read_entire_file(alloc, FILENAME);
-    defer alloc.free(content);
+    const root = try qtaks.find_project_root(alloc);
+    defer alloc.free(root);
 
-    const list = try qtaks.parse_file_content(alloc, FILENAME, content);
+    const list = try qtaks.process_directory(alloc, root);
     defer {
         for (list) |item| {
             alloc.free(item);
