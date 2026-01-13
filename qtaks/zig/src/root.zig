@@ -1,6 +1,8 @@
 const std = @import("std");
 const Allocator = std.mem.Allocator;
 const ArrayList = std.ArrayList;
+pub const basic = @import("basic.zig");
+const print = std.debug.print;
 
 pub const Tag = enum {
     TODO,
@@ -67,15 +69,6 @@ pub const Tag = enum {
     }
 };
 
-pub const Range = struct {
-    start: usize,
-    end: usize,
-
-    pub fn new(start: usize, end: usize) Range {
-        return Range{ .start = start, .end = end };
-    }
-};
-
 fn find_tag_end(line: []const u8, start: usize) usize {
     var current = start + 4;
     while (current < line.len and std.ascii.isAlphanumeric(line[current])) {
@@ -120,20 +113,17 @@ fn find_project_root(allocator: Allocator) ![]const u8 {
     return try std.fs.cwd().realpathAlloc(allocator, ".");
 }
 
-pub fn format_quickfix_item(allocator: Allocator, file_path: []const u8, content: []const u8, range: Range, line_num: usize, line_start_offset: usize) !QuickfixItem {
-    const tag_start = range.start + 4; // skip "// @"
-    const tag_end = if (tag_start >= range.end) tag_start else range.end;
-    const tag_name = content[tag_start..tag_end];
+pub fn format_quickfix_item(allocator: Allocator, file_path: []const u8, line: []const u8, start: usize, end: usize, line_num: usize) !QuickfixItem {
+    const tag_start = start + 4;
+    const tag_end = end;
+    const tag_name = line[tag_start..tag_end];
     const tag_name_owned = try allocator.dupe(u8, tag_name);
+    defer allocator.free(tag_name_owned);
 
-    const tag_name_upper = try allocator.alloc(u8, tag_name_owned.len);
-    for (tag_name_owned, 0..) |char, i| {
-        tag_name_upper[i] = std.ascii.toUpper(char);
-    }
+    const tag_name_upper = try basic.to_upper_copy(allocator, tag_name_owned);
+    defer allocator.free(tag_name_upper);
 
     const tag = Tag.from_string(tag_name_upper) orelse .NOTE;
-    allocator.free(tag_name_upper);
-    allocator.free(tag_name_owned);
 
     const file_path_owned = try allocator.dupe(u8, file_path);
 
@@ -141,7 +131,7 @@ pub fn format_quickfix_item(allocator: Allocator, file_path: []const u8, content
         .tag = tag,
         .file_path = file_path_owned,
         .line = line_num,
-        .col = (range.start - line_start_offset) + 1,
+        .col = start,
     };
 }
 
@@ -154,20 +144,8 @@ pub fn quickfix_item_to_string(allocator: Allocator, item: QuickfixItem) ![]u8 {
     });
 }
 
-pub fn get_all_comments(allocator: Allocator, content: []const u8) ![]Range {
-    var split_lines = std.mem.splitScalar(u8, content, '\n');
-    var range_list = try ArrayList(Range).initCapacity(allocator, 64);
-    defer range_list.deinit(allocator);
-    while (split_lines.next()) |line| {
-        const start = std.mem.indexOf(u8, line, "// @") orelse continue;
-        const end = find_tag_end(line, start);
-        try range_list.append(allocator, Range.new(start, end));
-    }
-    return try range_list.toOwnedSlice(allocator);
-}
-
-pub fn make_quickfix_item(allocator: Allocator, file_path: []const u8, content: []const u8, range: Range, line_num: usize, line_start_offset: usize) ![]const u8 {
-    const item = try format_quickfix_item(allocator, file_path, content, range, line_num, line_start_offset);
+pub fn make_quickfix_item(allocator: Allocator, file_path: []const u8, line: []const u8, start: usize, end: usize, line_num: usize) ![]const u8 {
+    const item = try format_quickfix_item(allocator, file_path, line, start, end, line_num);
     defer allocator.free(item.file_path);
     return try quickfix_item_to_string(allocator, item);
 }
@@ -178,23 +156,18 @@ pub fn parse_file_content(allocator: Allocator, file_path: []const u8, content: 
     defer quickfix_list.deinit(allocator);
 
     var line_num: usize = 1;
-    var byte_offset: usize = 0;
 
     while (split_lines.next()) |line| {
         const start = std.mem.indexOf(u8, line, "// @") orelse {
-            byte_offset += line.len + 1; // +1 for newline
             line_num += 1;
             continue;
         };
 
-        const line_start_offset = byte_offset;
         const end = find_tag_end(line, start);
-        const range = Range.new(byte_offset + start, byte_offset + end);
 
-        const quickfix_item = try make_quickfix_item(allocator, file_path, content, range, line_num, line_start_offset);
+        const quickfix_item = try make_quickfix_item(allocator, file_path, line, start, end, line_num);
         try quickfix_list.append(allocator, quickfix_item);
 
-        byte_offset += line.len + 1; // +1 for newline
         line_num += 1;
     }
 

@@ -1,6 +1,6 @@
 const std = @import("std");
 const qtaks = @import("qtaks");
-const basic = @import("basic.zig");
+const basic = qtaks.basic;
 const print = std.debug.print;
 
 const FILENAME = "src/main.zig";
