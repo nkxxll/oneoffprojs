@@ -1,3 +1,73 @@
+FILE_EXTENSION :: enum {
+    JAI;
+    C;
+    CPP;
+    JAVA;
+    JAVA_SCRIPT;
+    TYPE_SCRIPT;
+    TEXT;
+    UNKOWN;
+}
+
+file_extension_to_string :: (file_extension: FILE_EXTENSION) -> string {
+    if #complete file_extension == {
+        case .JAI;
+            return "jai";
+        case .C;
+            return "c";
+        case .CPP;
+            return "cpp";
+        case .JAVA;
+            return "java";
+        case .JAVA_SCRIPT;
+            return "js";
+        case .TYPE_SCRIPT;
+            return "ts";
+        case .TEXT;
+            return "txt";
+        case FILE_EXTENSION.UNKOWN;
+            return "unknown";
+    }
+}
+
+file_extension_from_string :: (s: string) -> FILE_EXTENSION {
+    if s == {
+        case "jai";
+            return .JAI;
+        case "js";
+            return .JAVA_SCRIPT;
+        case "ts";
+            return .TYPE_SCRIPT;
+        case "java";
+            return .JAVA;
+        case "c";
+            return .C;
+        case "cpp";
+            return .CPP;
+        case "txt";
+            return .TEXT;
+        case;
+            return FILE_EXTENSION.UNKOWN;
+
+    }
+}
+
+file_extension_comment_string :: (file_extension: FILE_EXTENSION) -> string {
+    if #complete file_extension == {
+        case .JAI; #through;
+        case .C; #through;
+        case .CPP; #through;
+        case .JAVA; #through;
+        case .JAVA_SCRIPT; #through;
+        case .TYPE_SCRIPT;
+            return "// ";
+        case .TEXT; #through;
+        case FILE_EXTENSION.UNKOWN;
+            return "";
+
+    }
+}
+
 TAG_TYPE :: enum {
     BUG;
     CLEANUP;
@@ -14,7 +84,7 @@ TAG_TYPE :: enum {
     UNKOWN;
 }
 
-string_from_tag_type :: (tag_type: TAG_TYPE) -> string {
+tag_type_to_string :: (tag_type: TAG_TYPE) -> string {
     if #complete tag_type == {
         case .BUG;
             return "BUG";
@@ -40,7 +110,7 @@ string_from_tag_type :: (tag_type: TAG_TYPE) -> string {
             return "TODO";
         case .WARNING;
             return "WARNING";
-        case .UNKOWN;
+        case TAG_TYPE.UNKOWN;
             return "UNKOWN";
     }
 
@@ -75,7 +145,7 @@ tag_type_from_string :: (tag_name: string) -> TAG_TYPE {
         case "warning";
             return .WARNING;
         case;
-            return .UNKOWN;
+            return TAG_TYPE.UNKOWN;
     }
 }
 
@@ -102,9 +172,17 @@ comment_after_tag :: (line: string, tag_end: int) -> string {
 visitor :: (info: *File_Visit_Info, builder: *String_Builder) {
     extension := path_extension(info.full_name);
     filename := info.full_name;
-    if extension == {
-        case "jai";
-            content, success := read_entire_file(filename);
+    file_extension := file_extension_from_string(extension);
+    if #complete file_extension == {
+        case .JAI; #through;
+        case .C; #through;
+        case .JAVA; #through;
+        case .JAVA_SCRIPT; #through;
+        case .TYPE_SCRIPT; #through;
+        case .CPP; #through;
+        case .TEXT;
+        comment_string := file_extension_comment_string(file_extension);
+        content, success := read_entire_file(filename);
             if !success {
                 log_error("Warning: Could not open %!", filename);
                 return;
@@ -112,7 +190,7 @@ visitor :: (info: *File_Visit_Info, builder: *String_Builder) {
             defer free(content);
             lines := split(content, "\n");
             for line, i: lines {
-                index := find_index_from_left(line, "// @");
+                index := find_index_from_left(line, tprint("%@", comment_string));
                 if (index == -1) {
                     continue;
                 }
@@ -123,11 +201,12 @@ visitor :: (info: *File_Visit_Info, builder: *String_Builder) {
                 comment: string;
                 if end + 1 < line.count {
                     comment = comment_after_tag(line, end);
-                    print_to_builder(builder, "% tag at %:%:% '%'\n", string_from_tag_type(tag_type), filename, i + 1, start + 4, comment);
+                    print_to_builder(builder, "% tag at %:%:% '%'\n", tag_type_to_string(tag_type), filename, i + 1, start + 4, comment);
                 } else {
-                    print_to_builder(builder, "% tag at %:%:%\n", string_from_tag_type(tag_type), filename, i + 1, start + 4);
+                    print_to_builder(builder, "% tag at %:%:%\n", tag_type_to_string(tag_type), filename, i + 1, start + 4);
                 }
             }
+        case FILE_EXTENSION.UNKOWN;
     }
 }
 
