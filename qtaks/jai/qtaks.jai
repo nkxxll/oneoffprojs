@@ -6,6 +6,22 @@ FILE_EXTENSION :: enum {
     JAVA_SCRIPT;
     TYPE_SCRIPT;
     TEXT;
+    PYTHON;
+    GO;
+    RUST;
+    RUBY;
+    PHP;
+    SWIFT;
+    KOTLIN;
+    SCALA;
+    SHELL;
+    BASH;
+    LUA;
+    R;
+    SQL;
+    DART;
+    MARKDOWN;
+    MDX;
     UNKOWN;
 }
 
@@ -25,6 +41,38 @@ file_extension_to_string :: (file_extension: FILE_EXTENSION) -> string {
             return "ts";
         case .TEXT;
             return "txt";
+        case .PYTHON;
+            return "py";
+        case .GO;
+            return "go";
+        case .RUST;
+            return "rs";
+        case .RUBY;
+            return "rb";
+        case .PHP;
+            return "php";
+        case .SWIFT;
+            return "swift";
+        case .KOTLIN;
+            return "kt";
+        case .SCALA;
+            return "scala";
+        case .SHELL;
+            return "sh";
+        case .BASH;
+            return "bash";
+        case .LUA;
+            return "lua";
+        case .R;
+            return "r";
+        case .SQL;
+            return "sql";
+        case .DART;
+            return "dart";
+        case .MARKDOWN;
+            return "md";
+        case .MDX;
+            return "mdx";
         case FILE_EXTENSION.UNKOWN;
             return "unknown";
     }
@@ -46,6 +94,38 @@ file_extension_from_string :: (s: string) -> FILE_EXTENSION {
             return .CPP;
         case "txt";
             return .TEXT;
+        case "py";
+            return .PYTHON;
+        case "go";
+            return .GO;
+        case "rs";
+            return .RUST;
+        case "rb";
+            return .RUBY;
+        case "php";
+            return .PHP;
+        case "swift";
+            return .SWIFT;
+        case "kt";
+            return .KOTLIN;
+        case "scala";
+            return .SCALA;
+        case "sh";
+            return .SHELL;
+        case "bash";
+            return .BASH;
+        case "lua";
+            return .LUA;
+        case "r";
+            return .R;
+        case "sql";
+            return .SQL;
+        case "dart";
+            return .DART;
+        case "md";
+            return .MARKDOWN;
+        case "mdx";
+            return .MDX;
         case;
             return FILE_EXTENSION.UNKOWN;
 
@@ -59,8 +139,28 @@ file_extension_comment_string :: (file_extension: FILE_EXTENSION) -> string {
         case .CPP; #through;
         case .JAVA; #through;
         case .JAVA_SCRIPT; #through;
-        case .TYPE_SCRIPT;
+        case .TYPE_SCRIPT; #through;
+        case .GO; #through;
+        case .RUST; #through;
+        case .SWIFT; #through;
+        case .KOTLIN; #through;
+        case .SCALA; #through;
+        case .DART;
             return "// ";
+        case .PYTHON; #through;
+        case .RUBY; #through;
+        case .SHELL; #through;
+        case .BASH; #through;
+        case .R;
+            return "# ";
+        case .PHP;
+            return "// ";
+        case .LUA; #through;
+        case .SQL;
+            return "-- ";
+        case .MARKDOWN; #through;
+        case .MDX;
+            return "<!-- ";
         case .TEXT; #through;
         case FILE_EXTENSION.UNKOWN;
             return "";
@@ -149,8 +249,8 @@ tag_type_from_string :: (tag_name: string) -> TAG_TYPE {
     }
 }
 
-find_end_of_tag :: (line: string, start: int) -> int {
-    current := start + 4;
+find_end_of_tag :: (line: string, start: int, comment_string_len: int) -> int {
+    current := start + 1 + comment_string_len;
     while is_alpha(line[current]) {
         if current + 1 >= line.count return line.count;
         current += 1;
@@ -169,6 +269,16 @@ comment_after_tag :: (line: string, tag_end: int) -> string {
     return comment;
 }
 
+get_relative_path :: (cwd: string, full_path: string) -> string {
+    if begins_with(full_path, cwd) {
+        s: string;
+        s.data = full_path.data + cwd.count;
+        s.count = full_path.count - cwd.count;
+        return s;
+    }
+    return full_path;
+}
+
 visitor :: (info: *File_Visit_Info, builder: *String_Builder) {
     extension := path_extension(info.full_name);
     filename := info.full_name;
@@ -180,30 +290,53 @@ visitor :: (info: *File_Visit_Info, builder: *String_Builder) {
         case .JAVA_SCRIPT; #through;
         case .TYPE_SCRIPT; #through;
         case .CPP; #through;
-        case .TEXT;
-        comment_string := file_extension_comment_string(file_extension);
-        content, success := read_entire_file(filename);
+        case .TEXT; #through;
+        case .PYTHON; #through;
+        case .GO; #through;
+        case .RUST; #through;
+        case .RUBY; #through;
+        case .PHP; #through;
+        case .SWIFT; #through;
+        case .KOTLIN; #through;
+        case .SCALA; #through;
+        case .SHELL; #through;
+        case .BASH; #through;
+        case .LUA; #through;
+        case .R; #through;
+        case .SQL; #through;
+        case .DART; #through;
+        case .MARKDOWN; #through;
+        case .MDX;
+            comment_string := file_extension_comment_string(file_extension);
+            comment_string_len := comment_string.count;
+            content, success := read_entire_file(filename);
             if !success {
                 log_error("Warning: Could not open %!", filename);
                 return;
             }
             defer free(content);
             lines := split(content, "\n");
-            for line, i: lines {
-                index := find_index_from_left(line, tprint("%@", comment_string));
+            for *line, i: lines {
+                index := find_index_from_left(line.*, tprint("%@", comment_string));
                 if (index == -1) {
                     continue;
                 }
                 start := index;
-                end := find_end_of_tag(line, start);
-                tag_string := slice(line, start + 4, end - start - 4);
+                end := find_end_of_tag(line.*, start, comment_string_len);
+                tag_string := slice(line.*, start + 1 + comment_string_len, end - start - 1 - comment_string_len);
                 tag_type := tag_type_from_string(tag_string);
                 comment: string;
+                relative_path := get_relative_path(get_working_directory(), filename);
                 if end + 1 < line.count {
-                    comment = comment_after_tag(line, end);
-                    print_to_builder(builder, "% tag at %:%:% '%'\n", tag_type_to_string(tag_type), filename, i + 1, start + 4, comment);
+                    if file_extension != .MDX && file_extension != .MARKDOWN {
+                        comment = comment_after_tag(line.*, end);
+                    } else {
+                        line.count -= 4;
+                        comment = comment_after_tag(line.*, end);
+                    }
+                    print_to_builder(builder, "%:%:% tag % '%'\n", relative_path, i + 1, start + 4, tag_type_to_string(tag_type), comment);
                 } else {
-                    print_to_builder(builder, "% tag at %:%:%\n", tag_type_to_string(tag_type), filename, i + 1, start + 4);
+                    print_to_builder(builder, "%:%:% tag %\n", relative_path, i + 1, start + 4, tag_type_to_string(tag_type));
                 }
             }
         case FILE_EXTENSION.UNKOWN;

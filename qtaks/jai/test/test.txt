@@ -1,0 +1,19 @@
+Text File Test
+
+This is a plain text file for testing.
+
+@todo Add more content
+@incomplete This file is not complete
+@bug There might be a bug here
+@hack This is a quick hack
+
+@speed Performance could be improved
+@warning Be careful with this
+@robustness Make it more robust
+@stability May not be stable
+@cleanup Remove temporary stuff
+@simplify Too complicated
+@note Just a note
+@feature This needs a feature
+
+End of file.
