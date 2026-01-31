@@ -1,0 +1,2 @@
+notes_tagger
+notes_tagger_cli
