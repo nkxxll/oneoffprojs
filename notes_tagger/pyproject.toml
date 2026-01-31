@@ -1,0 +1,32 @@
+[project]
+name = "notes-tagger"
+version = "0.1.0"
+description = "Semantic note tagging using sentence embeddings"
+requires-python = ">=3.10"
+dependencies = [
+    "sentence-transformers>=2.2.0",
+    "numpy>=1.24.0",
+    "pydantic>=2.0",
+    "pyyaml>=6.0",
+    "click>=8.1.0",
+    "tqdm>=4.65.0",
+    "aiofiles>=25.1.0",
+]
+
+[project.scripts]
+notes-tagger = "notes_tagger_cli.main:cli"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+]
+
+[tool.setuptools.packages.find]
+include = ["notes_tagger*", "notes_tagger_cli*"]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.2",
+    "pytest-cov>=7.0.0",
+]
