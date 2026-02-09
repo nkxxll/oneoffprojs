@@ -1,0 +1,10 @@
+Metadata-Version: 2.4
+Name: reading-list
+Version: 0.1.0
+Summary: Add your description here
+Requires-Python: >=3.14
+Description-Content-Type: text/markdown
+Requires-Dist: beautifulsoup4>=4.14.3
+Requires-Dist: requests>=2.32.5
+Requires-Dist: trafilatura>=2.0.0
+Requires-Dist: sentence-transformers>=3.0.0
