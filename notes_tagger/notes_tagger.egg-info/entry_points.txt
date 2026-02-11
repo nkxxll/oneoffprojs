@@ -1,2 +1,0 @@
-[console_scripts]
-notes-tagger = notes_tagger_cli.main:cli

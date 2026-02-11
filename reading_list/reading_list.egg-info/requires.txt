@@ -1,4 +1,0 @@
-beautifulsoup4>=4.14.3
-requests>=2.32.5
-trafilatura>=2.0.0
-sentence-transformers>=3.0.0

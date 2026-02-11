@@ -1,0 +1,20 @@
+ollama_base_url = "http://127.0.0.1:11434"
+# ollama_model = "qwen3:14b"
+ollama_model = "qwen3:latest"
+output_dir = "research"
+run_mode = "oneshot"
+request_timeout_sec = 120
+max_chunk_chars = 4000
+max_context_chunks = 6
+max_additional_sources = 20
+github_client_id = ""
+github_token = ""
+skip_github = false
+
+# Sources can include local folders/files and URLs.
+# Example:
+# sources = [
+#   "./docs",
+#   "https://github.com/<org>/<repo>",
+#   "https://example.com/docs"
+# ]

@@ -1,2 +1,0 @@
-[console_scripts]
-reading-list = readinglist.main:main
