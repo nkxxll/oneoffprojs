@@ -1,0 +1,10 @@
+[project]
+name = "mdmeta"
+version = "0.1.0"
+description = "Add YAML metadata frontmatter to markdown files"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = []
+
+[project.scripts]
+mdmeta = "main:main"
