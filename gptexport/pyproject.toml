@@ -1,0 +1,13 @@
+[project]
+name = "gptexport"
+version = "0.1.0"
+description = "Export ChatGPT shared conversations to Markdown"
+requires-python = ">=3.10"
+dependencies = []
+
+[project.scripts]
+gptexport = "gptexport:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
