@@ -1,0 +1,33 @@
+[project]
+name = "noteweaver"
+version = "0.1.0"
+description = "Note Weaver a local llm note tool"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "langchain>=1.2.10",
+    "langchain-ollama>=1.0.1",
+    "numpy>=2.0.0",
+    "ollama>=0.6.1",
+    "fastapi>=0.115.0",
+    "uvicorn>=0.34.0",
+    "typer>=0.15.0",
+    "rich>=13.9.0",
+    "httpx>=0.28.0",
+]
+
+[project.scripts]
+nweaver = "noteweaver.cli.app:app"
+nweaver-server = "noteweaver.server.app:main"
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["noteweaver*"]
+
+[tool.pytest.ini_options]
+filterwarnings = [
+    "ignore:Core Pydantic V1 functionality:UserWarning",
+]
