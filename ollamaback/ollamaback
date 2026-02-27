@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+OUTPUT_DIR="$HOME/ollamabackground"
+NAMING_MODEL="qwen3:0.8b"
+ANSWER_MODEL="qwen3:14b"
+
+usage() {
+    echo "Usage: ollamaback <question>"
+    echo "Ask a question in the background, save the answer to ~/ollamabackground/"
+    exit 1
+}
+
+[[ $# -lt 1 ]] && usage
+
+QUESTION="$*"
+
+mkdir -p "$OUTPUT_DIR"
+
+# Step 1: Generate a filename using the small model
+RAW_NAME=$(ollama run "$NAMING_MODEL" "Generate a short, descriptive kebab-case filename (no extension, no path, no quotes, no explanation, just the filename) for a document answering this question: $QUESTION" 2>/dev/null)
+
+# Sanitize: keep only alphanumeric, hyphens, underscores; trim whitespace
+FILENAME=$(echo "$RAW_NAME" | tr -d '\n' | sed 's/[^a-zA-Z0-9_-]//g' | head -c 80)
+# Fallback if empty
+[[ -z "$FILENAME" ]] && FILENAME="question-$(date +%s)"
+
+FILEPATH="$OUTPUT_DIR/${FILENAME}.md"
+
+# Avoid overwriting existing files
+if [[ -e "$FILEPATH" ]]; then
+    FILEPATH="$OUTPUT_DIR/${FILENAME}-$(date +%s).md"
+fi
+
+# Step 2: Ask the real question with the thinking model and save output
+{
+    echo "# Question"
+    echo ""
+    echo "$QUESTION"
+    echo ""
+    echo "# Answer"
+    echo ""
+    ollama run "$ANSWER_MODEL" --think "$QUESTION" 2>/dev/null
+} > "$FILEPATH"
+
+# Step 3: Print results to stdout
+echo ""
+echo "=== Saved to: $FILEPATH ==="
+echo ""
+cat "$FILEPATH"
